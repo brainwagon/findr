@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi Camera Control</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Raspberry Pi Camera Control</h1>
+    <div class="container">
+        <div class="video-container">
+            <img src="{{ url_for('video_feed') }}" width="640">
+        </div>
+        <div class="camera-properties">
+            <p>Model: {{ model }}</p>
+            <p>Pixel Array Size: {{ pixel_array_size }}</p>
+        </div>
+        <div class="controls-container">
+            <h2>Controls</h2>
+            <div class="control">
+                <label for="gain">Gain</label>
+                <input type="range" id="gain" name="gain" min="0" max="100" value="{{ gain }}">
+                <span id="gain_value">{{ gain }}</span>
+            </div>
+            <div class="control">
+                <label for="exposure">Exposure</label>
+                <input type="range" id="exposure" name="exposure" min="0" max="100" value="{{ exposure }}">
+                <span id="exposure_time_value">{{ exposure_ms }}</span>
+            </div>
+            <div class="control">
+                <label for="brightness">Brightness</label>
+                <input type="range" id="brightness" name="brightness" min="0" max="100" value="{{ brightness }}">
+                <span id="brightness_value">{{ brightness }}</span>
+            </div>
+            <div class="control">
+                <label for="contrast">Contrast</label>
+                <input type="range" id="contrast" name="contrast" min="0" max="100" value="{{ contrast }}">
+                <span id="contrast_value">{{ contrast }}</span>
+            </div>
+            <div class="control">
+                <label for="sharpness">Sharpness</label>
+                <input type="range" id="sharpness" name="sharpness" min="0" max="100" value="{{ sharpness }}">
+                <span id="sharpness_value">{{ sharpness }}</span>
+            </div>
+            <div class="control">
+                <label for="ae_enable">Auto Exposure Enable</label>
+                <input type="checkbox" id="ae_enable" name="ae_enable" {{ 'checked' if ae_enable else '' }}>
+            </div>
+            <div class="control">
+                <label for="ae_exposure_mode">AE Exposure Mode</label>
+                <select id="ae_exposure_mode" name="ae_exposure_mode">
+                    <option value="0" {{ 'selected' if ae_exposure_mode == 0 else '' }}>Normal</option>
+                    <option value="1" {{ 'selected' if ae_exposure_mode == 1 else '' }}>Short</option>
+                    <option value="2" {{ 'selected' if ae_exposure_mode == 2 else '' }}>Long</option>
+                    <option value="3" {{ 'selected' if ae_exposure_mode == 3 else '' }}>Custom</option>
+                </select>
+            </div>
+            <div class="control">
+                <label for="exposure_value">AE Exposure Value</label>
+                <input type="range" id="exposure_value" name="exposure_value" min="0" max="100" value="{{ exposure_value }}">
+                <span id="exposure_value_display">{{ exposure_value_display }}</span>
+            </div>
+            <div class="control">
+                <button id="capture_raw_button">Capture Raw Image</button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/main.js"></script>
+    <footer>
+        <p>Copyright 2025, Mark VandeWettering &lt;mvandewettering@gmail.com&gt;</p>
+    </footer>
+</body>
+</html>
