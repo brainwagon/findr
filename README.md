@@ -1,5 +1,7 @@
 # Raspberry Pi Remote Camera Control
 
+**⚠️ Warning: This project is a work in progress and a prototype. It is not fully functional or robust and should not be used in production environments. ⚠️**
+
 This project provides a web-based interface to control a Raspberry Pi camera remotely. It runs a Flask web server on the Pi, allowing you to view a live stream and adjust camera settings from any web browser on the same network.
 
 ## Features
