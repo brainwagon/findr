@@ -4,6 +4,18 @@
 
 This project provides a web-based interface to control a Raspberry Pi camera remotely. It runs a Flask web server on the Pi, allowing you to view a live stream and adjust camera settings from any web browser on the same network.
 
+**⚠️ When I first started developing this, I noticed that there was a 
+substantial amount of noise, which took the appearance of many horizontal lines
+in the captured imagery, especially when the gain was set to be values greater
+than one.   A bit of digging around revealed that it was likely caused
+by power supply noise on the 3.3v rail, but that there was an option I could
+add to `/boot/firmware/config.txt` that would fix it, and for once, it 
+actually did work.  You probably want to add this line to `/boot/firmware/config.txt':
+
+```
+power_force_3v3_pwm=1
+```
+
 ## Features
 
 - **Web-Based Interface:** Control your camera from a simple web page.
