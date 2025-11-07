@@ -4,17 +4,27 @@ import numpy as np
 from astropy.io import fits
 import datetime
 
-try:
-    from picamera2 import Picamera2
-except ImportError:
-    from camera_dummy import Picamera2
+from picamera2 import Picamera2
 
 app = Flask(__name__)
 
 camera = Picamera2()
 
 # Initialize camera and set initial controls once
-config = camera.create_still_configuration(lores={"size" : (640, 480)})
+config = camera.create_still_configuration(
+    main = {
+        "size" : (1456, 1088),
+        "format" : "RGB888"
+        },
+    lores = {
+        "size" : (640, 480),
+        "format" : "YUV420",
+        },
+    raw = {
+        "size" : (1456, 1088),
+        "format" : "R10_CSI2P",
+        }
+        )
 print("STILL IMAGE CONFIGURATION")
 for k, v in config.items():
 	print(k, v)
@@ -56,7 +66,7 @@ def gen_frames():
     """Generate frames for the video stream."""
     while True:
         buffer = io.BytesIO()
-        camera.capture_file(buffer, format='jpeg')
+        camera.capture_file(buffer, name='lores', format='jpeg')
         frame = buffer.getvalue()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
@@ -78,7 +88,7 @@ def index():
     # AnalogueGain
     min_gain, max_gain, _ = camera.camera_controls.get("AnalogueGain", (1.0, 251.1886444091797, 1.0))
     current_gain = getattr(current_controls, "AnalogueGain", 1.0)
-    slider_values['gain'] = int(((current_gain - min_gain) / (max_gain - min_gain)) * 100) if (max_gain - min_gain) != 0 else 0
+    slider_values['gain'] = int(((current_gain - min_gain) / (max_gain - min_gain)) * 9) + 1 if (max_gain - min_gain) != 0 else 1
 
     # ExposureTime
     exposure_times = [1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000]
@@ -113,11 +123,19 @@ def video_feed():
     return Response(gen_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/capture_lores_jpeg')
+def capture_lores_jpeg():
+    """Capture a lores (640x480) JPEG image."""
+    buffer = io.BytesIO()
+    camera.capture_file(buffer, name='lores', format='jpeg')
+    frame = buffer.getvalue()
+    return Response(frame, mimetype='image/jpeg')
+
 @app.route('/snapshot')
 def snapshot():
-    """Capture a single frame and return it as a JPEG image."""
+    """Capture a full resolution (1456x1088) JPEG image."""
     buffer = io.BytesIO()
-    camera.capture_file(buffer, format='jpeg')
+    camera.capture_file(buffer, name='main', format='jpeg')
     frame = buffer.getvalue()
     return Response(frame, mimetype='image/jpeg')
 
@@ -133,7 +151,7 @@ def set_controls():
 
     # Map slider values (0-100) to camera control values
     min_gain, max_gain, _ = camera.camera_controls.get("AnalogueGain", (1.0, 251.1886444091797, 1.0))
-    analogue_gain = min_gain + (gain / 100.0) * (max_gain - min_gain)
+    analogue_gain = min_gain + ((gain - 1) / 9.0) * (max_gain - min_gain)
     exposure_times = [1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000]
     exposure_index = int(request.json.get('exposure_index', 0))
     exposure_time = exposure_times[exposure_index]
@@ -155,32 +173,31 @@ def set_controls():
     safe_set_controls(controls_to_set)
     return "", 204
 
-@app.route('/capture_raw', methods=['POST'])
-def capture_raw():
+@app.route('/capture_full_fits', methods=['POST'])
+def capture_full_fits():
     """Capture a full resolution raw image and save it as a FITS file."""
     try:
-        camera.stop()
-        # Configure for raw capture
-        raw_config = camera.create_still_configuration(raw={'format': 'R10_CSI2P'})
-        camera.configure(raw_config)
-        camera.start()
+        request = camera.capture_request() 
+        raw_array = request.make_array("raw")
+        metadata = request.get_metadata() 
+        print("Got a capture request.")
+        print(metadata)
 
-        # Capture the raw data
+        # Capture the raw data from the 'raw' stream
         stream = io.BytesIO()
-        camera.capture_file(stream, format='raw')
+        camera.capture_file(stream, name='raw', format='raw')
         stream.seek(0)
 
-        # Create a FITS file
         # The raw data is 10-bit, so we need to unpack it.
         # This is a simplified example; real unpacking might be more complex
         # and depend on the specific camera's output format.
+        # Assuming 10-bit packed into 16-bit for simplicity in dummy camera
         data = np.frombuffer(stream.read(), dtype=np.uint16)
         
         # Reshape the data based on the sensor's resolution
-        # This is an example, you might need to adjust the dimensions
-        sensor_resolution = camera.camera_properties['PixelArraySize']
+        # Ensure the dimensions match the full resolution (1456x1088)
+        sensor_resolution = (1456, 1088) # Hardcode for clarity, but could get from camera_properties
         data = data.reshape(sensor_resolution[1], sensor_resolution[0])
-
 
         # Create an HDU
         hdu = fits.PrimaryHDU(data)
@@ -200,11 +217,8 @@ def capture_raw():
         return f"Successfully captured raw image to {filename}", 200
     except Exception as e:
         return str(e), 500
-    finally:
-        # Reconfigure back to the default configuration
-        camera.stop()
-        camera.configure(camera.create_still_configuration())
-        camera.start()
+    finally: 
+        request.release()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, threaded=True)

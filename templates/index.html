@@ -20,8 +20,9 @@
             <h2>Controls</h2>
             <div class="control">
                 <label for="gain">Gain</label>
-                <input type="range" id="gain" name="gain" min="0" max="100" value="{{ gain }}">
-                <span id="gain_value">{{ gain }}</span>
+                <button id="gain_down_button">&lt;</button>
+                <input type="range" id="gain" name="gain" min="1" max="10" value="{{ gain }}">
+                <button id="gain_up_button">&gt;</button>
             </div>
             <div class="control">
                 <label for="exposure">Exposure</label>
@@ -55,7 +56,13 @@
             </div>
 
             <div class="control">
-                <button id="capture_raw_button">Capture Raw Image</button>
+                <button id="capture_lores_jpeg_button">Capture LoRes JPEG</button>
+            </div>
+            <div class="control">
+                <button id="capture_full_jpeg_button">Capture Full JPEG</button>
+            </div>
+            <div class="control">
+                <button id="capture_full_fits_button">Capture Full FITS</button>
             </div>
         </div>
     </div>

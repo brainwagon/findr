@@ -86,6 +86,14 @@ footer {
     color: red;
 }
 
+.control button {
+    background-color: red;
+    color: white;
+    border: none;
+    cursor: pointer;
+    padding: 5px 10px;
+}
+
 .camera-properties {
     padding: 10px;
     border: 1px solid #ccc;

@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const sharpnessSlider = document.getElementById('sharpness');
 
 
-    const gainValueSpan = document.getElementById('gain_value');
 
     const brightnessValueSpan = document.getElementById('brightness_value');
     const contrastValueSpan = document.getElementById('contrast_value');
@@ -16,7 +15,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
 
     function updateControlValueDisplay() {
-        gainValueSpan.innerText = gainSlider.value;
 
         brightnessValueSpan.innerText = brightnessSlider.value;
         contrastValueSpan.innerText = contrastSlider.value;
@@ -51,10 +49,76 @@ document.addEventListener('DOMContentLoaded', (event) => {
     contrastSlider.addEventListener('input', sendControls);
     sharpnessSlider.addEventListener('input', sendControls);
 
+    const gainDownButton = document.getElementById('gain_down_button');
+    const gainUpButton = document.getElementById('gain_up_button');
 
-    const captureRawButton = document.getElementById('capture_raw_button');
-    captureRawButton.addEventListener('click', () => {
-        fetch('/capture_raw', {
+    gainDownButton.addEventListener('click', () => {
+        gainSlider.value = Math.max(parseInt(gainSlider.value) - 1, gainSlider.min);
+        sendControls();
+    });
+
+    gainUpButton.addEventListener('click', () => {
+        gainSlider.value = Math.min(parseInt(gainSlider.value) + 1, gainSlider.max);
+        sendControls();
+    });
+
+
+    const captureLoresJpegButton = document.getElementById('capture_lores_jpeg_button');
+    const captureFullJpegButton = document.getElementById('capture_full_jpeg_button');
+    const captureFullFitsButton = document.getElementById('capture_full_fits_button');
+
+    captureLoresJpegButton.addEventListener('click', () => {
+        fetch('/capture_lores_jpeg')
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            } else {
+                throw new Error('Failed to capture lores JPEG.');
+            }
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lores_jpeg_${new Date().toISOString()}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error capturing lores JPEG.');
+        });
+    });
+
+    captureFullJpegButton.addEventListener('click', () => {
+        fetch('/snapshot')
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            } else {
+                throw new Error('Failed to capture full JPEG.');
+            }
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `full_jpeg_${new Date().toISOString()}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error capturing full JPEG.');
+        });
+    });
+
+    captureFullFitsButton.addEventListener('click', () => {
+        fetch('/capture_full_fits', {
             method: 'POST'
         })
         .then(response => response.text())
@@ -63,7 +127,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error capturing raw image.');
+            alert('Error capturing full FITS image.');
         });
     });
 
