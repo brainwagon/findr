@@ -1,12 +1,119 @@
-from flask import Flask, render_template, Response, request
+from flask import Flask, render_template, Response, request, jsonify
 import io
 import numpy as np
 from astropy.io import fits
 import datetime
+import serial
+import pynmea2
+import threading
+import time
 
 from picamera2 import Picamera2
 
 app = Flask(__name__)
+
+import atexit
+
+def close_camera():
+    """Close the camera on exit."""
+    camera.close()
+
+atexit.register(close_camera)
+
+# GPS data dictionary
+gps_data = {
+    "latitude": "not detected",
+    "longitude": "not detected",
+    "timestamp": "not detected",
+    "altitude": "not detected",
+    "gps_fix": "pending",
+    "num_satellites": "not detected",
+    "last_gga_sentence": "not detected",
+    "gga_sentence_count": 0
+}
+
+def gps_thread_function():
+
+    """Thread function to read GPS data."""
+
+    global gps_data
+
+    while True:
+
+        try:
+
+            ser = serial.Serial('/dev/ttyAMA0', 9600, timeout=1)
+
+            ser.flushInput()
+
+            time.sleep(0.1)
+
+            while True:
+
+                try:
+
+                    line = ser.readline().decode('ascii', errors='replace')
+
+                    if line.startswith(('$GPGGA', '$GNGGA')):
+
+                        msg = pynmea2.parse(line)
+
+                        gps_data['last_gga_sentence'] = line.strip()
+
+                        gps_data['gga_sentence_count'] += 1
+
+                        if msg.latitude is not None and msg.longitude is not None and msg.altitude is not None:
+
+                            gps_data = {
+
+                                "latitude": f"{msg.latitude:.4f}",
+
+                                "longitude": f"{msg.longitude:.4f}",
+
+                                "timestamp": str(msg.timestamp),
+
+                                "altitude": f"{msg.altitude:.1f}",
+
+                                "gps_fix": "valid",
+
+                                "num_satellites": str(msg.num_satellites)
+
+                            }
+
+                        else:
+
+                            gps_data["gps_fix"] = "pending"
+
+                            gps_data["num_satellites"] = str(msg.num_satellites)
+
+                except pynmea2.ParseError:
+
+                    continue
+
+        except serial.SerialException:
+
+            gps_data["latitude"] = "not detected"
+
+            gps_data["longitude"] = "not detected"
+
+            gps_data["timestamp"] = "not detected"
+
+            gps_data["altitude"] = "not detected"
+
+            gps_data["gps_fix"] = "pending"
+
+            time.sleep(5)  # Wait before retrying
+
+        except Exception:
+
+            # Broad exception to catch other potential errors
+
+            time.sleep(5)
+
+@app.route('/gps')
+def get_gps_data():
+    """Return GPS data as JSON."""
+    return jsonify(gps_data)
 
 camera = Picamera2()
 
@@ -142,34 +249,48 @@ def snapshot():
 @app.route('/set_controls', methods=['POST'])
 def set_controls():
     """Set camera controls."""
-    gain = float(request.json.get('gain'))
+    data = request.json
+    
+    controls_to_set = {"AeEnable": False} # Disable auto exposure when setting manual controls
 
-    brightness = float(request.json.get('brightness'))
-    contrast = float(request.json.get('contrast'))
-    sharpness = float(request.json.get('sharpness'))
+    if 'gain' in data:
+        gain = float(data.get('gain'))
+        min_gain, max_gain, _ = camera.camera_controls.get("AnalogueGain", (1.0, 251.1886444091797, 1.0))
+        analogue_gain = min_gain + ((gain - 1) / 9.0) * (max_gain - min_gain)
+        controls_to_set["AnalogueGain"] = analogue_gain
 
+    if 'exposure_index' in data:
+        exposure_times = [1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000]
+        exposure_index = int(data.get('exposure_index', 0))
+        exposure_time = exposure_times[exposure_index]
+        controls_to_set["ExposureTime"] = exposure_time
 
-    # Map slider values (0-100) to camera control values
-    min_gain, max_gain, _ = camera.camera_controls.get("AnalogueGain", (1.0, 251.1886444091797, 1.0))
-    analogue_gain = min_gain + ((gain - 1) / 9.0) * (max_gain - min_gain)
-    exposure_times = [1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000]
-    exposure_index = int(request.json.get('exposure_index', 0))
-    exposure_time = exposure_times[exposure_index]
-    min_bright, max_bright, _ = camera.camera_controls.get("Brightness", (-1.0, 1.0, 0.0))
-    brightness_val = min_bright + (brightness / 100.0) * (max_bright - min_bright)
-    min_contrast, max_contrast, _ = camera.camera_controls.get("Contrast", (0.0, 32.0, 1.0))
-    contrast_val = min_contrast + (contrast / 100.0) * (max_contrast - min_contrast)
-    min_sharp, max_sharp, _ = camera.camera_controls.get("Sharpness", (0.0, 16.0, 1.0))
-    sharpness_val = min_sharp + (sharpness / 100.0) * (max_sharp - min_sharp)
+    if 'brightness' in data:
+        brightness = float(data.get('brightness'))
+        min_bright, max_bright, _ = camera.camera_controls.get("Brightness", (-1.0, 1.0, 0.0))
+        brightness_val = min_bright + (brightness / 100.0) * (max_bright - min_bright)
+        controls_to_set["Brightness"] = brightness_val
 
-    controls_to_set = {
-        "AeEnable": False,
-        "AnalogueGain": analogue_gain,
-        "ExposureTime": exposure_time,
-        "Brightness": brightness_val,
-        "Contrast": contrast_val,
-        "Sharpness": sharpness_val
-    }
+    if 'contrast' in data:
+        contrast = float(data.get('contrast'))
+        min_contrast, max_contrast, _ = camera.camera_controls.get("Contrast", (0.0, 32.0, 1.0))
+        contrast_val = min_contrast + (contrast / 100.0) * (max_contrast - min_contrast)
+        controls_to_set["Contrast"] = contrast_val
+
+    if 'sharpness' in data:
+        sharpness = float(data.get('sharpness'))
+        min_sharp, max_sharp, _ = camera.camera_controls.get("Sharpness", (0.0, 16.0, 1.0))
+        sharpness_val = min_sharp + (sharpness / 100.0) * (max_sharp - min_sharp)
+        controls_to_set["Sharpness"] = sharpness_val
+
+    if 'ScalerCrop' in data:
+        scaler_crop = data.get('ScalerCrop')
+        # Ensure scaler_crop is a tuple/list of 4 integers
+        if isinstance(scaler_crop, list) and len(scaler_crop) == 4 and all(isinstance(x, int) for x in scaler_crop):
+            controls_to_set["ScalerCrop"] = tuple(scaler_crop)
+        else:
+            print(f"Warning: Invalid ScalerCrop value received: {scaler_crop}")
+
     safe_set_controls(controls_to_set)
     return "", 204
 
@@ -221,4 +342,8 @@ def capture_full_fits():
         request.release()
 
 if __name__ == '__main__':
+    # Start the GPS thread
+    gps_thread = threading.Thread(target=gps_thread_function)
+    gps_thread.daemon = True
+    gps_thread.start()
     app.run(host='0.0.0.0', port=8080, threaded=True)
