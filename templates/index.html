@@ -56,8 +56,12 @@
                 <span id="sharpness_value">{{ sharpness }}</span>
             </div>
             <div class="control">
-                <label for="zoom_checkbox">Zoom 640x480</label>
-                <input type="checkbox" id="zoom_checkbox" name="zoom_checkbox">
+                <label for="zoom_select">Zoom</label>
+                <select id="zoom_select" name="zoom_select">
+                    <option value="none">None</option>
+                    <option value="640x480">640x480</option>
+                    <option value="320x240">320x240</option>
+                </select>
             </div>
 
             <div class="control">
