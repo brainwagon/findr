@@ -119,6 +119,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const captureLoresJpegButton = document.getElementById('capture_lores_jpeg_button');
     const captureFullJpegButton = document.getElementById('capture_full_jpeg_button');
     const captureFullFitsButton = document.getElementById('capture_full_fits_button');
+    const solveFieldButton = document.getElementById('solve_field_button');
 
     captureLoresJpegButton.addEventListener('click', () => {
         fetch('/capture_lores_jpeg')
@@ -184,25 +185,85 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
     });
 
+    let solveStatusPollInterval;
+
+    function pollSolveStatus() {
+        fetch('/solve_status')
+            .then(response => response.json())
+            .then(data => {
+                const solverStatusEl = document.getElementById('solver-status');
+                const solverResultEl = document.getElementById('solver-result');
+                const solvedImageEl = document.getElementById('solved-image');
+
+                if (data.status === 'solved') {
+                    solverStatusEl.innerText = 'Solved';
+                    solverResultEl.innerText = `RA: ${data.ra}, Dec: ${data.dec}, Roll: ${data.roll}`;
+                    solvedImageEl.src = data.solved_image_url + '?t=' + new Date().getTime(); // Add timestamp to avoid caching
+                    solvedImageEl.style.display = 'block';
+                    clearInterval(solveStatusPollInterval);
+                } else if (data.status === 'failed') {
+                    solverStatusEl.innerText = 'Solver failed.';
+                    solverResultEl.innerText = '';
+                    if (data.solved_image_url) {
+                        solvedImageEl.src = data.solved_image_url + '?t=' + new Date().getTime();
+                        solvedImageEl.style.display = 'block';
+                    } else {
+                        solvedImageEl.style.display = 'none';
+                    }
+                    clearInterval(solveStatusPollInterval);
+                } else {
+                    solverStatusEl.innerText = `Solver status: ${data.status}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching solver status:', error);
+                clearInterval(solveStatusPollInterval);
+            });
+    }
+
+    function solveField() {
+        const solverStatusEl = document.getElementById('solver-status');
+        solverStatusEl.innerText = 'Starting solver...';
+
+        fetch('/solve', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'solving') {
+                solverStatusEl.innerText = 'Solving...';
+                // Start polling for status
+                solveStatusPollInterval = setInterval(pollSolveStatus, 2000);
+            } else {
+                solverStatusEl.innerText = 'Failed to start solver.';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            solverStatusEl.innerText = 'Error starting solver.';
+        });
+    }
+
+    solveFieldButton.addEventListener('click', solveField);
+
     saveSettingsButton.addEventListener('click', saveSettings);
 
     // Send initial control values to the backend and update display when the page loads
     sendControls();
 
-    function updateGpsData() {
-        fetch('/gps')
+
+    function updateSystemStats() {
+        fetch('/system-stats')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('gps-time').innerText = data.timestamp;
-                document.getElementById('gps-lat').innerText = data.latitude;
-                document.getElementById('gps-lon').innerText = data.longitude;
-                document.getElementById('gps-alt').innerText = data.altitude;
+                document.getElementById('cpu-temp').innerText = data.cpu_temp;
+                document.getElementById('cpu-load').innerText = data.cpu_load;
             })
-            .catch(error => console.error('Error fetching GPS data:', error));
+            .catch(error => console.error('Error fetching system stats:', error));
     }
 
-    // Fetch GPS data every 10 seconds
-    setInterval(updateGpsData, 10000);
-    // Initial call to populate GPS data
-    updateGpsData();
+    // Fetch system stats every 5 seconds
+    setInterval(updateSystemStats, 5000);
+    // Initial call to populate system stats
+    updateSystemStats();
 });

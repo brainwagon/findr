@@ -1,12 +1,21 @@
 from flask import Flask, render_template, Response, request, jsonify
 import io
+import math
+import os
+import random
 import numpy as np
+# This is needed for some reason...
+np.math = math
 from astropy.io import fits
 import datetime
 import serial
 import pynmea2
 import threading
 import time
+import tetra3
+from PIL import Image
+
+tetra = tetra3.Tetra3()
 
 from picamera2 import Picamera2
 
@@ -31,6 +40,89 @@ gps_data = {
     "last_gga_sentence": "not detected",
     "gga_sentence_count": 0
 }
+
+# Solver status
+solver_status = "idle"
+solver_result = {}
+
+def solve_plate():
+    """Capture an image and solve for RA/Dec/Roll."""
+    global solver_status, solver_result
+    img = None
+    try:
+        # For testing, load from a local file instead of capturing from camera
+        test_images_dir = "test-images"
+        image_files = [f for f in os.listdir(test_images_dir) if f.lower().endswith(('.jpg', '.jpeg'))]
+        if not image_files:
+            solver_status = "failed"
+            solver_result = {"error": "No test images found."}
+            print("Solver failed: No test images found in 'test-images' directory.")
+            return
+        random_image_file = random.choice(image_files)
+        image_path = os.path.join(test_images_dir, random_image_file)
+        img = Image.open(image_path)
+        solved_image_path = "static/solved_field.jpg"
+
+        solution = tetra.solve_from_image(img,
+                return_visual=True, return_matches=True)
+        if solution and 'RA' in solution and 'Dec' in solution and 'Roll' in solution:
+            # Get the visual solution
+            visual_solution = solution['visual']
+
+            # Convert both images to numpy arrays
+            img_array = np.array(img.convert('RGB'))
+            visual_array = np.array(visual_solution.convert('RGB'))
+
+            # Resize visual solution to match input image dimensions
+            if img_array.shape != visual_array.shape:
+                visual_solution_resized = visual_solution.resize(img.size)
+                visual_array = np.array(visual_solution_resized.convert('RGB'))
+
+            # Combine the images by taking the maximum pixel value
+            combined_array = np.maximum(img_array, visual_array)
+
+            # Create a new image from the combined array
+            combined_image = Image.fromarray(combined_array)
+
+            # Save the combined image
+            combined_image.save(solved_image_path)
+
+            solver_result = {
+                "ra": f"{solution['RA']:.4f}",
+                "dec": f"{solution['Dec']:.4f}",
+                "roll": f"{solution['Roll']:.4f}",
+                "solved_image_url": solved_image_path
+            }
+            solver_status = "solved"
+        else:
+            img.save(solved_image_path)
+            solver_status = "failed"
+            solver_result = {"solved_image_url": solved_image_path}
+
+    except Exception as e:
+        print(f"Solver failed: {e}")
+        if img:
+            img.save("static/solved_field.jpg")
+        solver_status = "failed"
+        solver_result = {"solved_image_url": "static/solved_field.jpg"}
+
+@app.route('/solve', methods=['POST'])
+def solve():
+    """Initiate plate solving in a background thread."""
+    global solver_status
+    solver_status = "solving"
+    solver_thread = threading.Thread(target=solve_plate)
+    solver_thread.start()
+    return jsonify({"status": "solving"})
+
+@app.route('/solve_status')
+def get_solve_status():
+    """Return the status of the plate solver."""
+    if solver_status == "solved" or solver_status == "failed":
+        return jsonify({"status": solver_status, **solver_result})
+    else:
+        return jsonify({"status": solver_status})
+
 
 def gps_thread_function():
 
@@ -114,6 +206,23 @@ def gps_thread_function():
 def get_gps_data():
     """Return GPS data as JSON."""
     return jsonify(gps_data)
+
+@app.route('/system-stats')
+def system_stats():
+    """Return system stats as JSON."""
+    try:
+        with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
+            temp = int(f.read().strip()) / 1000.0
+    except IOError:
+        temp = 'N/A'
+
+    try:
+        with open('/proc/loadavg', 'r') as f:
+            load = f.read().split()[0]
+    except IOError:
+        load = 'N/A'
+
+    return jsonify(cpu_temp=f"{temp:.1f}", cpu_load=load)
 
 camera = Picamera2()
 
