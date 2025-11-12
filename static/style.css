@@ -52,6 +52,23 @@ body {
     height: auto; /* Maintain aspect ratio */
 }
 
+.solver-container {
+    position: relative; /* Needed for absolute positioning of children */
+}
+
+.solution-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(0, 128, 0, 0.7); /* Green with some transparency */
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    z-index: 10; /* Ensure it's above the image */
+    font-size: 1.2em;
+}
+
 .controls-container {
     padding: 1em;
 }
