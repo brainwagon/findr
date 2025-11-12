@@ -100,12 +100,16 @@ solver_status = "idle"
 solver_result = {}
 test_mode = False # Global variable for test mode
 
+# In-memory storage for the solved image bytes to avoid writing to disk.
+# Access guarded by solved_image_lock.
+solved_image_bytes = None
+solved_image_lock = threading.Lock()
+
 def solve_plate():
     """Capture an image and solve for RA/Dec/Roll."""
-    global solver_status, solver_result, test_mode
+    global solver_status, solver_result, test_mode, solved_image_bytes
     img = None
     try:
-        solved_image_path = "static/solved_field.jpg"
         if test_mode:
             # For testing, load from a local file instead of capturing from camera
             test_images_dir = "test-images"
@@ -122,6 +126,7 @@ def solve_plate():
             # Capture from Picamera
             buffer = io.BytesIO()
             camera.capture_file(buffer, name='lores', format='jpeg')
+            buffer.seek(0)
             img = Image.open(buffer)
 
         solution = tetra.solve_from_image(img,
@@ -139,6 +144,7 @@ def solve_plate():
             if img_array.shape != visual_array.shape:
                 visual_solution_resized = visual_solution.resize(img.size)
                 visual_array = np.array(visual_solution_resized.convert('RGB'))
+                visual_solution = visual_solution_resized
 
             # Combine the images by taking the maximum pixel value
             combined_array = np.maximum(img_array, visual_array)
@@ -146,30 +152,36 @@ def solve_plate():
             # Create a new image from the combined array
             combined_image = Image.fromarray(combined_array)
 
-            # okay, MTV
+            # okay, MTV - draw annotations
             draw = ImageDraw.Draw(combined_image)
-            for id, p in zip(solution["matched_catID"], solution["matched_centroids"]):
-                try: 
+            for id, p in zip(solution.get("matched_catID", []), solution.get("matched_centroids", [])):
+                try:
                     # not sure why x and y are swapped here...
-                    p = (int(p[1])+8, int(p[0])-8)
+                    p = (int(p[1]) + 8, int(p[0]) - 8)
                     id_str = decode_simbad_greek(ids.get(id, str(id)))
                     id_fields = id_str.split()
-                    if id_fields[0] == "*":
+                    if id_fields and id_fields[0] == "*":
                         id_str = ' '.join(id_fields[1:])
                     draw.text(p, f"{id_str}", fill=(255,255,255), font=font)
-                except:
+                except Exception:
                     pass
 
-            # Save the combined image
-            combined_image.save(solved_image_path)
+            # Save the combined image into memory (JPEG)
+            buf = io.BytesIO()
+            combined_image.save(buf, format='JPEG')
+            buf.seek(0)
+            with solved_image_lock:
+                solved_image_bytes = buf.getvalue()
 
+            # Build solver_result
+            solution_time_val = solution.get("T_solve", 0.0)
             solver_result = {
                 "ra": f"{solution['RA']:.4f}",
                 "dec": f"{solution['Dec']:.4f}",
                 "roll": f"{solution['Roll']:.4f}",
-                "solved_image_url": solved_image_path,
-                "solution_time" : f"{solution["T_solve"]:.2f}ms",
-                "constellation" : ephem.constellation((radians(solution['RA']), radians(solution['Dec'])))[1],
+                "solved_image_url": "/solved_field.jpg",
+                "solution_time": f"{solution_time_val:.2f}ms",
+                "constellation": ephem.constellation((radians(solution['RA']), radians(solution['Dec'])))[1],
             }
 
             solver_status = "solved"
@@ -178,16 +190,29 @@ def solve_plate():
             print(point_stellarium(radians(solution['RA']), radians(solution['Dec'])))
 
         else:
-            img.save(solved_image_path)
+            # Save the original input image into memory so the UI can still display something
+            buf = io.BytesIO()
+            img.save(buf, format='JPEG')
+            buf.seek(0)
+            with solved_image_lock:
+                solved_image_bytes = buf.getvalue()
+
             solver_status = "failed"
-            solver_result = {"solved_image_url": solved_image_path}
+            solver_result = {"solved_image_url": "/solved_field.jpg"}
 
     except Exception as e:
         print(f"Solver failed: {e}")
         if img:
-            img.save("static/solved_field.jpg")
+            try:
+                buf = io.BytesIO()
+                img.save(buf, format='JPEG')
+                buf.seek(0)
+                with solved_image_lock:
+                    solved_image_bytes = buf.getvalue()
+            except Exception:
+                pass
         solver_status = "failed"
-        solver_result = {"solved_image_url": "static/solved_field.jpg"}
+        solver_result = {"solved_image_url": "/solved_field.jpg"}
 
 @app.route('/solve', methods=['POST'])
 def solve():
@@ -255,7 +280,7 @@ camera.start()
 # Print available controls for debugging
 print("\nAvailable Camera Controls:")
 print("--------------------------------------------------------------------------------")
-print(f"{"Control Name":<25} {"Min":<15} {"Max":<15} {"Default":<15}")
+print(f"{'Control Name':<25} {'Min':<15} {'Max':<15} {'Default':<15}")
 print("--------------------------------------------------------------------------------")
 for control_name in sorted(camera.camera_controls.keys()):
     min_val, max_val, default_val = camera.camera_controls[control_name]
@@ -404,6 +429,15 @@ def set_controls():
 
     safe_set_controls(controls_to_set)
     return "", 204
+
+@app.route('/solved_field.jpg')
+def serve_solved_image():
+    """Serve the most recent solved image from memory (avoids writing to disk)."""
+    with solved_image_lock:
+        if solved_image_bytes:
+            return Response(solved_image_bytes, mimetype='image/jpeg')
+        else:
+            return "", 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, threaded=True)
