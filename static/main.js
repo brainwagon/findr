@@ -180,10 +180,10 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     solverResultEl.innerText = '';
                     if (data.solved_image_url) {
                         solvedImageEl.src = data.solved_image_url + '?t=' + new Date().getTime();
-                        solvedImageWrapperEl.style.display = 'block'; // Toggle wrapper display
                     } else {
-                        solvedImageWrapperEl.style.display = 'none'; // Toggle wrapper display
+                        solvedImageEl.src = '/static/black_640x480.jpg'; // Display black image on failure
                     }
+                    solvedImageWrapperEl.style.display = 'block'; // Ensure wrapper is always visible on failure
                     clearInterval(solveStatusPollInterval);
                     solveFieldButton.disabled = false;
                 } else {
