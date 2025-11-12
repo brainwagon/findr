@@ -118,7 +118,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     const captureLoresJpegButton = document.getElementById('capture_lores_jpeg_button');
     const captureFullJpegButton = document.getElementById('capture_full_jpeg_button');
-    const captureFullFitsButton = document.getElementById('capture_full_fits_button');
     const solveFieldButton = document.getElementById('solve_field_button');
 
     captureLoresJpegButton.addEventListener('click', () => {
@@ -168,20 +167,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         .catch(error => {
             console.error('Error:', error);
             alert('Error capturing full JPEG.');
-        });
-    });
-
-    captureFullFitsButton.addEventListener('click', () => {
-        fetch('/capture_full_fits', {
-            method: 'POST'
-        })
-        .then(response => response.text())
-        .then(data => {
-            alert(data);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error capturing full FITS image.');
         });
     });
 

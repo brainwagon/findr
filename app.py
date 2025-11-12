@@ -326,10 +326,6 @@ config = camera.create_still_configuration(
         "size" : (640, 480),
         "format" : "YUV420",
         },
-    raw = {
-        "size" : (1456, 1088),
-        "format" : "R10_CSI2P",
-        }
         )
 print("STILL IMAGE CONFIGURATION")
 for k, v in config.items():
@@ -492,53 +488,6 @@ def set_controls():
 
     safe_set_controls(controls_to_set)
     return "", 204
-
-@app.route('/capture_full_fits', methods=['POST'])
-def capture_full_fits():
-    """Capture a full resolution raw image and save it as a FITS file."""
-    try:
-        request = camera.capture_request() 
-        raw_array = request.make_array("raw")
-        metadata = request.get_metadata() 
-        print("Got a capture request.")
-        print(metadata)
-
-        # Capture the raw data from the 'raw' stream
-        stream = io.BytesIO()
-        camera.capture_file(stream, name='raw', format='raw')
-        stream.seek(0)
-
-        # The raw data is 10-bit, so we need to unpack it.
-        # This is a simplified example; real unpacking might be more complex
-        # and depend on the specific camera's output format.
-        # Assuming 10-bit packed into 16-bit for simplicity in dummy camera
-        data = np.frombuffer(stream.read(), dtype=np.uint16)
-        
-        # Reshape the data based on the sensor's resolution
-        # Ensure the dimensions match the full resolution (1456x1088)
-        sensor_resolution = (1456, 1088) # Hardcode for clarity, but could get from camera_properties
-        data = data.reshape(sensor_resolution[1], sensor_resolution[0])
-
-        # Create an HDU
-        hdu = fits.PrimaryHDU(data)
-
-        # Add some metadata
-        hdu.header['EXPOSURE'] = camera.controls.get('ExposureTime')
-        hdu.header['GAIN'] = camera.controls.get('AnalogueGain')
-        hdu.header['DATE'] = datetime.datetime.now().isoformat()
-
-        # Generate a filename
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        filename = f"capture-{timestamp}.fits"
-        
-        # Save the FITS file
-        hdu.writeto(filename, overwrite=True)
-
-        return f"Successfully captured raw image to {filename}", 200
-    except Exception as e:
-        return str(e), 500
-    finally: 
-        request.release()
 
 if __name__ == '__main__':
     # Start the GPS thread
