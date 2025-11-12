@@ -93,17 +93,16 @@
                     </div>
                 </div>
             </div>
-            <div class="controls-section">
-                <div class="controls-container">
-                    <h2>Expert Mode</h2>
-                    <div class="control">
-                        <label for="test_mode_checkbox">Test Mode</label>
-                        <input type="checkbox" id="test_mode_checkbox" name="test_mode" {{ 'checked' if test_mode else '' }}>
-                    </div>
+        </div>
+        <div class="expert-mode-section">
+            <div class="controls-container">
+                <h2>Expert Mode</h2>
+                <div class="control">
+                    <label for="test_mode_checkbox">Test Mode</label>
+                    <input type="checkbox" id="test_mode_checkbox" name="test_mode" {{ 'checked' if test_mode else '' }}>
                 </div>
             </div>
-        </div>
-        <div class="footer-info">
+        </div>        <div class="footer-info">
             <span>Model: {{ model }}</span>
             <span id="pixel_array_size_display">Pixel Array Size: {{ pixel_array_size }}</span>
             <span>CPU Temp: <span id="cpu-temp">...</span> &deg;C</span>
