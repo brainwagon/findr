@@ -10,8 +10,6 @@ import numpy as np
 np.math = math
 from astropy.io import fits
 import datetime
-import serial
-import pynmea2
 import threading
 import time
 import tetra3
@@ -96,18 +94,6 @@ def close_camera():
     camera.close()
 
 atexit.register(close_camera)
-
-# GPS data dictionary
-gps_data = {
-    "latitude": "not detected",
-    "longitude": "not detected",
-    "timestamp": "not detected",
-    "altitude": "not detected",
-    "gps_fix": "pending",
-    "num_satellites": "not detected",
-    "last_gga_sentence": "not detected",
-    "gga_sentence_count": 0
-}
 
 # Solver status
 solver_status = "idle"
@@ -213,89 +199,6 @@ def get_solve_status():
     else:
         return jsonify({"status": solver_status})
 
-
-def gps_thread_function():
-
-    """Thread function to read GPS data."""
-
-    global gps_data
-
-    while True:
-
-        try:
-
-            ser = serial.Serial('/dev/ttyAMA0', 9600, timeout=1)
-
-            ser.flushInput()
-
-            time.sleep(0.1)
-
-            while True:
-
-                try:
-
-                    line = ser.readline().decode('ascii', errors='replace')
-
-                    if line.startswith(('$GPGGA', '$GNGGA')):
-
-                        msg = pynmea2.parse(line)
-
-                        gps_data['last_gga_sentence'] = line.strip()
-
-                        gps_data['gga_sentence_count'] += 1
-
-                        if msg.latitude is not None and msg.longitude is not None and msg.altitude is not None:
-
-                            gps_data = {
-
-                                "latitude": f"{msg.latitude:.4f}",
-
-                                "longitude": f"{msg.longitude:.4f}",
-
-                                "timestamp": str(msg.timestamp),
-
-                                "altitude": f"{msg.altitude:.1f}",
-
-                                "gps_fix": "valid",
-
-                                "num_satellites": str(msg.num_satellites)
-
-                            }
-
-                        else:
-
-                            gps_data["gps_fix"] = "pending"
-
-                            gps_data["num_satellites"] = str(msg.num_satellites)
-
-                except pynmea2.ParseError:
-
-                    continue
-
-        except serial.SerialException:
-
-            gps_data["latitude"] = "not detected"
-
-            gps_data["longitude"] = "not detected"
-
-            gps_data["timestamp"] = "not detected"
-
-            gps_data["altitude"] = "not detected"
-
-            gps_data["gps_fix"] = "pending"
-
-            time.sleep(5)  # Wait before retrying
-
-        except Exception:
-
-            # Broad exception to catch other potential errors
-
-            time.sleep(5)
-
-@app.route('/gps')
-def get_gps_data():
-    """Return GPS data as JSON."""
-    return jsonify(gps_data)
 
 @app.route('/system-stats')
 def system_stats():
@@ -490,8 +393,4 @@ def set_controls():
     return "", 204
 
 if __name__ == '__main__':
-    # Start the GPS thread
-    gps_thread = threading.Thread(target=gps_thread_function)
-    gps_thread.daemon = True
-    gps_thread.start()
     app.run(host='0.0.0.0', port=8080, threaded=True)
