@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             if (data.status === 'solving') {
                 solverStatusEl.innerText = 'Solving...';
                 // Start polling for status
-                solveStatusPollInterval = setInterval(pollSolveStatus, 2000);
+                solveStatusPollInterval = setInterval(pollSolveStatus, 200);
             } else {
                 solverStatusEl.innerText = 'Failed to start solver.';
                 solveFieldButton.disabled = false;
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }
 
     // Fetch system stats every 5 seconds
-    setInterval(updateSystemStats, 5000);
+    setInterval(updateSystemStats, 15000);
     // Initial call to populate system stats
     updateSystemStats();
 
