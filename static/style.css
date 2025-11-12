@@ -20,8 +20,11 @@ body {
     flex: 1;
 }
 
-.info-section {
-    width: 100%;
+.footer-info {
+    display: flex;
+    justify-content: center;
+    gap: 1em;
+    margin-bottom: 1em;
 }
 
 .video-container {
@@ -41,15 +44,6 @@ body {
 
 .control {
     margin-bottom: 1em;
-}
-
-.camera-properties {
-    padding: 10px;
-    margin-top: 20px;
-}
-
-.gps-container {
-    text-align: center;
 }
 
 .valid-fix {
