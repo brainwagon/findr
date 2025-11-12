@@ -23,7 +23,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const settings = {
             gain: gainSelect.value,
             exposure_index: exposureSelect.value,
-            zoom_setting: zoomSelect.value
+            zoom_setting: zoomSelect.value,
+            test_mode: testModeCheckbox.checked
         };
         localStorage.setItem('cameraSettings', JSON.stringify(settings));
         alert('Camera settings saved!');
@@ -61,6 +62,10 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 zoomSelect.value = settings.zoom_setting;
                 // Manually trigger the change event to apply the crop
                 zoomSelect.dispatchEvent(new Event('change'));
+            }
+            if (settings.test_mode !== undefined) {
+                testModeCheckbox.checked = settings.test_mode;
+                sendTestMode(); // Send the loaded state to the backend
             }
             // sendControls will be called later in DOMContentLoaded, so no need to call it here
         }
