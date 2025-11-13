@@ -167,6 +167,21 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     const captureLoresJpegButton = document.getElementById('capture_lores_jpeg_button');
     const captureFullJpegButton = document.getElementById('capture_full_jpeg_button');
+    const pauseButton = document.getElementById('pause_button');
+
+    pauseButton.addEventListener('click', () => {
+        fetch('/toggle_pause', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.is_paused) {
+                pauseButton.innerText = 'Resume';
+            } else {
+                pauseButton.innerText = 'Pause';
+            }
+        });
+    });
 
 
     captureLoresJpegButton.addEventListener('click', () => {

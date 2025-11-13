@@ -132,6 +132,15 @@ atexit.register(close_camera)
 solver_status = "idle"
 solver_result = {}
 test_mode = False # Global variable for test mode
+is_paused = False # Global variable for pause state
+
+@app.route('/toggle_pause', methods=['POST'])
+def toggle_pause():
+    """Toggle the paused state."""
+    global is_paused
+    is_paused = not is_paused
+    return jsonify({"is_paused": is_paused})
+
 # Global variables for video feed and FPS
 latest_frame_bytes = None
 current_fps = 0
@@ -156,8 +165,11 @@ def calculate_solve_fps():
 
 def capture_and_process_frames():
     """Continuously captures frames, calculates FPS, and stores the latest frame."""
-    global latest_frame_bytes, current_fps, last_frame_time, frame_count
+    global latest_frame_bytes, current_fps, last_frame_time, frame_count, is_paused
     while True:
+        if is_paused:
+            time.sleep(0.1)
+            continue
         try:
             buffer = io.BytesIO()
             camera.capture_file(buffer, name='lores', format='jpeg')
@@ -229,7 +241,9 @@ def format_radec_fixed_width(angle_obj, is_ra=True, total_width=10, decimal_plac
 
 def solve_plate():
     """Capture an image and solve for RA/Dec/Roll."""
-    global solver_status, solver_result, test_mode, solved_image_bytes
+    global solver_status, solver_result, test_mode, solved_image_bytes, is_paused
+    if is_paused:
+        return
     img = None
     try:
         if test_mode:
