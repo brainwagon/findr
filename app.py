@@ -160,6 +160,40 @@ frame_capture_thread.start()
 solved_image_bytes = None
 solved_image_lock = threading.Lock()
 
+def format_radec_fixed_width(angle_obj, is_ra=True, total_width=10, decimal_places=1):
+    """
+    Formats an ephem.Angle object to a fixed-width string.
+    RA: HH:MM:SS.S (total_width=10)
+    Dec: sDD:MM:SS.S (total_width=11, s is sign)
+    """
+    s = str(angle_obj)
+    parts = s.split(':')
+
+    if is_ra:
+        # RA: HH:MM:SS.S
+        hours = parts[0].zfill(2)
+        minutes = parts[1].zfill(2)
+        seconds_float = float(parts[2])
+        formatted_seconds = f"{seconds_float:0{3+decimal_places}.{decimal_places}f}"
+        formatted_time = f"{hours}:{minutes}:{formatted_seconds}"
+    else:
+        # Dec: sDD:MM:SS.S
+        sign = ''
+        if parts[0].startswith('-'):
+            sign = '-'
+            parts[0] = parts[0][1:]
+        elif parts[0].startswith('+'):
+            sign = '+'
+            parts[0] = parts[0][1:]
+        
+        degrees = parts[0].zfill(2)
+        minutes = parts[1].zfill(2)
+        seconds_float = float(parts[2])
+        formatted_seconds = f"{seconds_float:0{3+decimal_places}.{decimal_places}f}"
+        formatted_time = f"{sign}{degrees}:{minutes}:{formatted_seconds}"
+    
+    return formatted_time.ljust(total_width)[:total_width]
+
 def solve_plate():
     """Capture an image and solve for RA/Dec/Roll."""
     global solver_status, solver_result, test_mode, solved_image_bytes
@@ -229,41 +263,6 @@ def solve_plate():
 
             # Build solver_result
             solution_time_val = solution.get("T_solve", 0.0)
-def format_radec_fixed_width(angle_obj, is_ra=True, total_width=10, decimal_places=1):
-    """
-    Formats an ephem.Angle object to a fixed-width string.
-    RA: HH:MM:SS.S (total_width=10)
-    Dec: sDD:MM:SS.S (total_width=11, s is sign)
-    """
-    s = str(angle_obj)
-    parts = s.split(':')
-
-    if is_ra:
-        # RA: HH:MM:SS.S
-        hours = parts[0].zfill(2)
-        minutes = parts[1].zfill(2)
-        seconds_float = float(parts[2])
-        formatted_seconds = f"{seconds_float:0{3+decimal_places}.{decimal_places}f}"
-        formatted_time = f"{hours}:{minutes}:{formatted_seconds}"
-    else:
-        # Dec: sDD:MM:SS.S
-        sign = ''
-        if parts[0].startswith('-'):
-            sign = '-'
-            parts[0] = parts[0][1:]
-        elif parts[0].startswith('+'):
-            sign = '+'
-            parts[0] = parts[0][1:]
-        
-        degrees = parts[0].zfill(2)
-        minutes = parts[1].zfill(2)
-        seconds_float = float(parts[2])
-        formatted_seconds = f"{seconds_float:0{3+decimal_places}.{decimal_places}f}"
-        formatted_time = f"{sign}{degrees}:{minutes}:{formatted_seconds}"
-    
-    return formatted_time.ljust(total_width)[:total_width]
-
-# ... (inside solve_plate function)
             ra_hms = ephem.hours(radians(solution['RA']))
             dec_dms = ephem.degrees(radians(solution['Dec']))
             solver_result = {
