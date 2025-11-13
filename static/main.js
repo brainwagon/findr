@@ -218,34 +218,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
         fetch('/solve_status')
             .then(response => response.json())
             .then(data => {
-                const solverStatusEl = document.getElementById('solver-status');
-                const solverResultEl = document.getElementById('solver-result');
 
-                if (data.status === 'solved') {
-                    solverStatusEl.innerText = 'Solved';
-                    solverResultEl.innerText = `RA: ${data.ra}, Dec: ${data.dec}, Roll: ${data.roll}, Solution Time: ${data.solution_time} Constellation: ${data.constellation}`;
-                    videoModeOverlay.innerText = 'SOLVE';
-                    videoModeOverlay.classList.remove('solve-fail');
-                    videoModeOverlay.classList.add('solve-success');
-                    clearInterval(solveStatusPollInterval);
-                    isSolving = false; // Reset flag
-                    if (currentVideoMode === 'solved') {
-                        solveField();
-                    }
-                } else if (data.status === 'failed') {
-                    solverStatusEl.innerText = 'Solver failed.';
-                    solverResultEl.innerText = '';
-                    videoModeOverlay.innerText = 'FAIL';
-                    videoModeOverlay.classList.remove('solve-success');
-                    videoModeOverlay.classList.add('solve-fail');
-                    clearInterval(solveStatusPollInterval);
-                    isSolving = false; // Reset flag
-                    if (currentVideoMode === 'solved') {
-                        solveField();
-                    }
-                } else {
-                    solverStatusEl.innerText = `Solver status: ${data.status}`;
-                }
+
+
             })
             .catch(error => {
                 console.error('Error fetching solver status:', error);
@@ -257,8 +232,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     function solveField() {
         if (isSolving) return; // Prevent multiple solves
 
-        const solverStatusEl = document.getElementById('solver-status');
-        solverStatusEl.innerText = 'Starting solver...';
         isSolving = true; // Set flag
 
         fetch('/solve', {
@@ -267,17 +240,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'solving') {
-                solverStatusEl.innerText = 'Solving...';
                 // Start polling for status
                 solveStatusPollInterval = setInterval(pollSolveStatus, 200);
             } else {
-                solverStatusEl.innerText = 'Failed to start solver.';
                 isSolving = false; // Reset flag on failure to start
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            solverStatusEl.innerText = 'Error starting solver.';
             isSolving = false; // Reset flag on error
         });
     }
