@@ -121,12 +121,6 @@ def calculate_solve_fps():
 
 
 
-# Global variables for video feed and FPS
-latest_frame_bytes = None
-current_fps = 0
-last_frame_time = time.time()
-frame_count = 0
-
 def capture_and_process_frames():
     """Continuously captures frames, calculates FPS, and stores the latest frame."""
     global latest_frame_bytes, current_fps, last_frame_time, frame_count
@@ -275,8 +269,6 @@ def solve_plate():
     finally:
         global solve_completed_count
         solve_completed_count += 1
-    finally:
-        pass
 
 @app.route('/solve', methods=['POST'])
 def solve():
