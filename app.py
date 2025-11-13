@@ -263,9 +263,8 @@ def solve_plate():
         global solve_fps, last_solve_time, solve_count
         solve_count += 1
         current_time = time.time()
-        elapsed_time = current_time - last_solve_time
-        if elapsed_time >= 1.0:
-            solve_fps = solve_count / elapsed_time
+                    elapsed_time = current_time - last_solve_time
+                    if elapsed_time >= 5.0:            solve_fps = solve_count / elapsed_time
             solve_count = 0
             last_solve_time = current_time
 
