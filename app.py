@@ -229,14 +229,49 @@ def solve_plate():
 
             # Build solver_result
             solution_time_val = solution.get("T_solve", 0.0)
+def format_radec_fixed_width(angle_obj, is_ra=True, total_width=10, decimal_places=1):
+    """
+    Formats an ephem.Angle object to a fixed-width string.
+    RA: HH:MM:SS.S (total_width=10)
+    Dec: sDD:MM:SS.S (total_width=11, s is sign)
+    """
+    s = str(angle_obj)
+    parts = s.split(':')
+
+    if is_ra:
+        # RA: HH:MM:SS.S
+        hours = parts[0].zfill(2)
+        minutes = parts[1].zfill(2)
+        seconds_float = float(parts[2])
+        formatted_seconds = f"{seconds_float:0{3+decimal_places}.{decimal_places}f}"
+        formatted_time = f"{hours}:{minutes}:{formatted_seconds}"
+    else:
+        # Dec: sDD:MM:SS.S
+        sign = ''
+        if parts[0].startswith('-'):
+            sign = '-'
+            parts[0] = parts[0][1:]
+        elif parts[0].startswith('+'):
+            sign = '+'
+            parts[0] = parts[0][1:]
+        
+        degrees = parts[0].zfill(2)
+        minutes = parts[1].zfill(2)
+        seconds_float = float(parts[2])
+        formatted_seconds = f"{seconds_float:0{3+decimal_places}.{decimal_places}f}"
+        formatted_time = f"{sign}{degrees}:{minutes}:{formatted_seconds}"
+    
+    return formatted_time.ljust(total_width)[:total_width]
+
+# ... (inside solve_plate function)
             ra_hms = ephem.hours(radians(solution['RA']))
             dec_dms = ephem.degrees(radians(solution['Dec']))
             solver_result = {
                 "ra": f"{solution['RA']:.4f}",
                 "dec": f"{solution['Dec']:.4f}",
                 "roll": f"{solution['Roll']:.4f}",
-                "ra_hms": str(ra_hms),
-                "dec_dms": str(dec_dms),
+                "ra_hms": format_radec_fixed_width(ra_hms, is_ra=True, total_width=10, decimal_places=1),
+                "dec_dms": format_radec_fixed_width(dec_dms, is_ra=False, total_width=11, decimal_places=1),
                 "solved_image_url": "/solved_field.jpg",
                 "solution_time": f"{solution_time_val:.2f}ms",
                 "constellation": ephem.constellation((radians(solution['RA']), radians(solution['Dec'])))[1],
