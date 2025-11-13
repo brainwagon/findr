@@ -215,6 +215,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     currentVideoMode = 'solved';
                     clearInterval(solveStatusPollInterval);
                     isSolving = false; // Reset flag
+                    if (currentVideoMode === 'solved') {
+                        solveField();
+                    }
                 } else if (data.status === 'failed') {
                     solverStatusEl.innerText = 'Solver failed.';
                     solverResultEl.innerText = '';
@@ -227,6 +230,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     currentVideoMode = 'solved';
                     clearInterval(solveStatusPollInterval);
                     isSolving = false; // Reset flag
+                    if (currentVideoMode === 'solved') {
+                        solveField();
+                    }
                 } else {
                     solverStatusEl.innerText = `Solver status: ${data.status}`;
                 }
