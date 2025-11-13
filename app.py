@@ -117,15 +117,9 @@ def calculate_solve_fps():
         solve_fps = solve_completed_count / 5.0
         solve_completed_count = 0
 
-# ... (in solve_plate function)
-    finally:
-        global solve_completed_count
-        solve_completed_count += 1
 
-# ... (at the end of the file, before app.run)
-solve_fps_thread = threading.Thread(target=calculate_solve_fps)
-solve_fps_thread.daemon = True
-solve_fps_thread.start()
+
+
 
 # Global variables for video feed and FPS
 latest_frame_bytes = None
@@ -278,6 +272,9 @@ def solve_plate():
                 pass
         solver_status = "failed"
         solver_result = {"solved_image_url": "/solved_field.jpg"}
+    finally:
+        global solve_completed_count
+        solve_completed_count += 1
     finally:
         pass
 
@@ -513,5 +510,8 @@ def serve_solved_image():
             return "", 404
 
 if __name__ == '__main__':
+    solve_fps_thread = threading.Thread(target=calculate_solve_fps)
+    solve_fps_thread.daemon = True
+    solve_fps_thread.start()
     logging.getLogger("werkzeug").setLevel(logging.WARNING)
     app.run(host='0.0.0.0', port=8080, threaded=True)
