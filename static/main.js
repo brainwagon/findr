@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'solved') {
-                    raDisplay.innerText = `RA: ${data.ra_hms}`;
+                    raDisplay.innerText = ` RA: ${data.ra_hms}`;
                     decDisplay.innerText = `Dec: ${data.dec_dms}`;
                     videoModeOverlay.innerText = 'SOLVE';
                     videoModeOverlay.classList.remove('solve-fail');
