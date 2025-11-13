@@ -377,6 +377,7 @@ def get_solve_fps():
 @app.route('/')
 def index():
     """Return the main page with initial slider values."""
+    global test_mode
     # Get camera properties
     camera_properties = camera.camera_properties
     model = camera_properties.get("Model", "Unknown")
