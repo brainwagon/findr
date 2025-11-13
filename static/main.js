@@ -211,8 +211,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     solverStatusEl.innerText = 'Solved';
                     solverResultEl.innerText = `RA: ${data.ra}, Dec: ${data.dec}, Roll: ${data.roll}, Solution Time: ${data.solution_time} Constellation: ${data.constellation}`;
                     videoFeedImg.src = data.solved_image_url + '?t=' + new Date().getTime(); // Add timestamp to avoid caching
-                    videoModeSelect.value = 'solved';
-                    currentVideoMode = 'solved';
                     clearInterval(solveStatusPollInterval);
                     isSolving = false; // Reset flag
                     if (currentVideoMode === 'solved') {
@@ -226,8 +224,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     } else {
                         videoFeedImg.src = '/static/black_640x480.jpg'; // Display black image on failure
                     }
-                    videoModeSelect.value = 'solved';
-                    currentVideoMode = 'solved';
                     clearInterval(solveStatusPollInterval);
                     isSolving = false; // Reset flag
                     if (currentVideoMode === 'solved') {
