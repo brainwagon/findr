@@ -2,12 +2,20 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const videoFeedImg = document.getElementById('video_feed_img');
     const fpsDisplay = document.getElementById('fps_display');
     const videoModeSelect = document.getElementById('video_mode_select');
+    const videoModeOverlay = document.getElementById('video_mode_overlay');
 
     let currentVideoMode = 'live'; // Default to live mode
     let isSolving = false; // Flag to prevent multiple simultaneous solves
 
+    function updateVideoModeOverlay() {
+        if (videoModeOverlay) {
+            videoModeOverlay.innerText = currentVideoMode.toUpperCase();
+        }
+    }
+
     videoModeSelect.addEventListener('change', () => {
         currentVideoMode = videoModeSelect.value;
+        updateVideoModeOverlay();
         updateVideoFeedAndFPS(); // Update the feed immediately
         if (currentVideoMode === 'solved' && !isSolving) {
             solveField();
@@ -287,6 +295,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     // Send initial control values to the backend and update display when the page loads
     sendControls();
+    updateVideoModeOverlay(); // Set initial overlay text
+
 
 
     function updateSystemStats() {
