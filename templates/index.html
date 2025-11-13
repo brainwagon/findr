@@ -22,10 +22,7 @@
                 <div class="solver-container">
                     <p id="solver-status">Solver status not available</p>
                     <p id="solver-result"></p>
-                    <div class="solved-image-wrapper">
-                        <img id="solved-image" src="/static/black_640x480.jpg" />
-                        <span class="solution-overlay">SOLUTION</span>
-                    </div>
+                    
                 </div>
             </div>
             <div class="controls-section">
@@ -33,6 +30,13 @@
                     <h3>Controls</h3>
                     <div class="control">
                         <button id="solve_field_button">Solve Field</button>
+                    </div>
+                    <div class="control">
+                        <label for="video_mode_select">Video Mode</label>
+                        <select id="video_mode_select" name="video_mode">
+                            <option value="live">Live</option>
+                            <option value="solved">Solved</option>
+                        </select>
                     </div>
                     <div class="control">
                         <button id="capture_lores_jpeg_button">Capture LoRes JPEG</button>

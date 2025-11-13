@@ -1,10 +1,18 @@
 document.addEventListener('DOMContentLoaded', (event) => {
     const videoFeedImg = document.getElementById('video_feed_img');
     const fpsDisplay = document.getElementById('fps_display');
+    const videoModeSelect = document.getElementById('video_mode_select');
+
+    let currentVideoMode = 'live'; // Default to live mode
+
+    videoModeSelect.addEventListener('change', () => {
+        currentVideoMode = videoModeSelect.value;
+        updateVideoFeedAndFPS(); // Update the feed immediately
+    });
 
     // Function to update the video feed and fetch FPS
     function updateVideoFeedAndFPS() {
-        if (videoFeedImg) {
+        if (videoFeedImg && currentVideoMode === 'live') {
             // Add a timestamp to the URL to prevent caching and force reload
             videoFeedImg.src = '/video_feed?t=' + new Date().getTime();
         }
@@ -194,25 +202,25 @@ document.addEventListener('DOMContentLoaded', (event) => {
             .then(data => {
                 const solverStatusEl = document.getElementById('solver-status');
                 const solverResultEl = document.getElementById('solver-result');
-                const solvedImageEl = document.getElementById('solved-image');
-                const solvedImageWrapperEl = document.querySelector('.solved-image-wrapper');
 
                 if (data.status === 'solved') {
                     solverStatusEl.innerText = 'Solved';
                     solverResultEl.innerText = `RA: ${data.ra}, Dec: ${data.dec}, Roll: ${data.roll}, Solution Time: ${data.solution_time} Constellation: ${data.constellation}`;
-                    solvedImageEl.src = data.solved_image_url + '?t=' + new Date().getTime(); // Add timestamp to avoid caching
-                    solvedImageWrapperEl.style.display = 'block'; // Toggle wrapper display
+                    videoFeedImg.src = data.solved_image_url + '?t=' + new Date().getTime(); // Add timestamp to avoid caching
+                    videoModeSelect.value = 'solved';
+                    currentVideoMode = 'solved';
                     clearInterval(solveStatusPollInterval);
                     solveFieldButton.disabled = false;
                 } else if (data.status === 'failed') {
                     solverStatusEl.innerText = 'Solver failed.';
                     solverResultEl.innerText = '';
                     if (data.solved_image_url) {
-                        solvedImageEl.src = data.solved_image_url + '?t=' + new Date().getTime();
+                        videoFeedImg.src = data.solved_image_url + '?t=' + new Date().getTime();
                     } else {
-                        solvedImageEl.src = '/static/black_640x480.jpg'; // Display black image on failure
+                        videoFeedImg.src = '/static/black_640x480.jpg'; // Display black image on failure
                     }
-                    solvedImageWrapperEl.style.display = 'block'; // Ensure wrapper is always visible on failure
+                    videoModeSelect.value = 'solved';
+                    currentVideoMode = 'solved';
                     clearInterval(solveStatusPollInterval);
                     solveFieldButton.disabled = false;
                 } else {
