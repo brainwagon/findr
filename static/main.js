@@ -276,6 +276,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     clearInterval(solveStatusPollInterval);
                     isSolving = false; // Reset flag
                 } else {
+                }
             })
             .catch(error => {
                 console.error('Error fetching solver status:', error);
