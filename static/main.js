@@ -186,6 +186,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 pauseButton.innerText = 'Resume';
             } else {
                 pauseButton.innerText = 'Pause';
+                if (currentVideoMode === 'solved' && !isSolving) {
+                    solveField();
+                }
             }
         });
     });
