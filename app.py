@@ -98,6 +98,7 @@ atexit.register(close_camera)
 # Solver status
 solver_status = "idle"
 solver_result = {}
+test_mode = False # Global variable for test mode
 # Global variables for video feed and FPS
 latest_frame_bytes = None
 current_fps = 0
