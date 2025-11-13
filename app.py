@@ -107,6 +107,25 @@ frame_count = 0
 solve_fps = 0
 last_solve_time = time.time()
 solve_count = 0
+solve_completed_count = 0
+
+def calculate_solve_fps():
+    """Continuously calculates the solve FPS."""
+    global solve_fps, solve_completed_count
+    while True:
+        time.sleep(5)
+        solve_fps = solve_completed_count / 5.0
+        solve_completed_count = 0
+
+# ... (in solve_plate function)
+    finally:
+        global solve_completed_count
+        solve_completed_count += 1
+
+# ... (at the end of the file, before app.run)
+solve_fps_thread = threading.Thread(target=calculate_solve_fps)
+solve_fps_thread.daemon = True
+solve_fps_thread.start()
 
 # Global variables for video feed and FPS
 latest_frame_bytes = None
@@ -260,14 +279,7 @@ def solve_plate():
         solver_status = "failed"
         solver_result = {"solved_image_url": "/solved_field.jpg"}
     finally:
-        global solve_fps, last_solve_time, solve_count
-        solve_count += 1
-        current_time = time.time()
-        elapsed_time = current_time - last_solve_time
-        if elapsed_time >= 5.0:
-            solve_fps = solve_count / elapsed_time
-            solve_count = 0
-            last_solve_time = current_time
+        pass
 
 @app.route('/solve', methods=['POST'])
 def solve():
