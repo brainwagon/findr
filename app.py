@@ -15,9 +15,22 @@ import time
 import tetra3
 from PIL import Image, ImageDraw, ImageFont
 import ephem
+import configparser
 import csv
 import requests
 import i2c
+
+# Create a new ephem observer
+observer = ephem.Observer()
+
+# Load configuration from location.ini
+config = configparser.ConfigParser()
+config.read('location.ini')
+
+# Set observer's location from the configuration file
+observer.lat = config.get('location', 'lat', fallback='0')
+observer.lon = config.get('location', 'lon', fallback='0')
+
 
 # libraries needed to solve for a "proper" WCS coordinate system
 
@@ -320,12 +333,22 @@ def solve_plate():
             solution_time_val = solution.get("T_solve", 0.0)
             ra_hms = ephem.hours(radians(solution['RA']))
             dec_dms = ephem.degrees(radians(solution['Dec']))
+
+            # now we can compute the alt/az for the solved center.
+            observer.date = ephem.now()
+            target = ephem.FixedBody()
+            target._ra = ra_hms
+            target._dec = dec_dms
+            target.compute(observer)
+            
             solver_result = {
                 "ra": f"{solution['RA']:.4f}",
                 "dec": f"{solution['Dec']:.4f}",
                 "roll": f"{solution['Roll']:.4f}",
                 "ra_hms": format_radec_fixed_width(ra_hms, is_ra=True, total_width=10, decimal_places=1),
                 "dec_dms": format_radec_fixed_width(dec_dms, is_ra=False, total_width=11, decimal_places=1),
+                "alt": f"{math.degrees(target.alt):.1f}",
+                "az": f"{math.degrees(target.az):.1f}",
                 "solved_image_url": "/solved_field.jpg",
                 "solution_time": f"{solution_time_val:.2f}ms",
                 "constellation": ephem.constellation((radians(solution['RA']), radians(solution['Dec'])))[1],

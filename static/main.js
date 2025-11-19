@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const radecContainer = document.getElementById('radec-container');
     const raDisplay = document.getElementById('ra-display');
     const decDisplay = document.getElementById('dec-display');
+    const altDisplay = document.getElementById('alt-display');
+    const azDisplay = document.getElementById('az-display');
 
     let currentVideoMode = 'live'; // Default to live mode
     let isSolving = false; // Flag to prevent multiple simultaneous solves
@@ -253,6 +255,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 if (data.status === 'solved') {
                     raDisplay.innerText = data.ra_hms;
                     decDisplay.innerText = data.dec_dms;
+                    altDisplay.innerText = data.alt;
+                    azDisplay.innerText = data.az;
                     videoModeOverlay.innerText = 'SOLVE';
                     videoModeOverlay.classList.remove('solve-fail');
                     videoModeOverlay.classList.add('solve-success');
@@ -264,6 +268,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 } else if (data.status === 'failed') {
                     raDisplay.innerText = '--:--:--.-';
                     decDisplay.innerText = '--:--:--.-';
+                    altDisplay.innerText = '--.-';
+                    azDisplay.innerText = '--.-';
                     videoModeOverlay.innerText = 'FAIL';
                     videoModeOverlay.classList.remove('solve-success');
                     videoModeOverlay.classList.add('solve-fail');
