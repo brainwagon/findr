@@ -365,7 +365,7 @@ def solve_plate():
                 "az": f"{math.degrees(target.az):.1f}",
                 "solved_image_url": "/solved_field.jpg",
                 "solution_time": f"{solution_time_val:.2f}ms",
-                "constellation": ephem.constellation((radians(solution['RA']), radians(solution['Dec'])))[1],
+                "constellation": ephem.constellation((radians(solution['RA']), radians(solution['Dec'])))[0],
                 "matched_stars_count": len(solution.get("matched_catID", [])),
             }
 
@@ -379,7 +379,6 @@ def solve_plate():
             # including the possibility of adding the distortion parameter.
 
             try:
-                print("TESTING")
 
                 matched_stars = np.array(solution["matched_stars"])
                 matched_centroids = np.array(solution["matched_centroids"])
@@ -397,14 +396,11 @@ def solve_plate():
                 world_coords = SkyCoord(ra = star_ra, dec = star_dec, frame = 'icrs')
 
                 # now, fit the model.. 
-                print("GOING TO COMPUTE WCS")
                 wcs = fit_wcs_from_points(
                     star_xy,
                     world_coords, 
                     projection='TAN',
                     sip_degree=2)
-
-                print("WCS", wcs)
 
                 # Draw constellation boundaries
                 constellation_name = solver_result.get("constellation")
@@ -417,7 +413,7 @@ def solve_plate():
                             px, py = wcs.world_to_pixel(SkyCoord(ra, dec, unit="deg"))
                             pixel_points.append((px, py))
                         except Exception as e:
-                            print(f"Error converting point to pixel: {e}")
+                            # print(f"Error converting point to pixel: {e}")
                             pixel_points.append(None)
                     
                     # Draw lines between consecutive points
@@ -425,9 +421,9 @@ def solve_plate():
                         p1 = pixel_points[i]
                         p2 = pixel_points[i+1]
                         if p1 and p2:
-                            # Check if both points are within the image boundaries
-                            if (0 <= p1[0] < img.width and 0 <= p1[1] < img.height and
-                                0 <= p2[0] < img.width and 0 <= p2[1] < img.height):
+                            # Check if at least one point is within the image boundaries
+                            if (0 <= p1[0] < img.width and 0 <= p1[1] < img.height) or \
+                               (0 <= p2[0] < img.width and 0 <= p2[1] < img.height):
                                 draw.line([p1, p2], fill="yellow", width=1)
 
             except Exception as e:
