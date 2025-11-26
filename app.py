@@ -295,7 +295,30 @@ is_paused = False # Global variable for pause state
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    model = camera.camera_properties.get('Model', 'N/A')
+    pixel_array_size = str(camera.camera_properties.get('PixelArraySize', 'N/A'))
+    # i just want to pass some variables to the template...
+    # i'll fix this later.
+    gain = 1
+    exposure_index = 0
+    exposure_times = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]
+    brightness = 50
+    contrast = 50
+    sharpness = 50
+    test_mode = False
+
+
+    return render_template('index.html', 
+            model=model, 
+            pixel_array_size=pixel_array_size,
+            gain=gain,
+            exposure_index=exposure_index,
+            exposure_times=exposure_times,
+            brightness=brightness,
+            contrast=contrast,
+            sharpness=sharpness,
+            test_mode=test_mode
+            )
 
 def gen_frames():
     """Generate frames for video stream."""
@@ -682,20 +705,27 @@ def system_stats():
             load = f.read().split()[0]
     except IOError:
         load = 'N/A'
-    
+
     voltage = "N/A"
     current = "N/A"
+    low_voltage_warning = False
     if ina219 and ina219.address is not None:
         try:
-            voltage = f"{ina219.get_bus_voltage():.2f}"
+            bus_voltage = ina219.get_bus_voltage()
+            voltage = f"{bus_voltage:.2f}"
             current = f"{ina219.get_current():.2f}"
+            if bus_voltage < 3.1:
+                low_voltage_warning = True
         except Exception as e:
             # On the first pass, this might fail if the sensor is not
             # yet ready.   We can ignore it.
             pass
 
-
-    return jsonify(cpu_temp=f"{temp:.1f}", cpu_load=load, voltage=voltage, current=current)
+    return jsonify(cpu_temp=f"{temp:.1f}" if isinstance(temp, float) else temp,
+                   cpu_load=load,
+                   voltage=voltage,
+                   current=current,
+                   low_voltage_warning=low_voltage_warning)
 
 @app.route('/set_test_mode', methods=['POST'])
 def set_test_mode():

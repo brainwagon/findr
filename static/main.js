@@ -351,6 +351,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 document.getElementById('cpu-load').innerText = data.cpu_load;
                 document.getElementById('voltage').innerText = data.voltage;
                 document.getElementById('current').innerText = data.current;
+                const lowVoltageWarningElement = document.getElementById('low-voltage-warning');
+                if (data.low_voltage_warning) {
+                    lowVoltageWarningElement.style.display = 'inline';
+                } else {
+                    lowVoltageWarningElement.style.display = 'none';
+                }
             })
             .catch(error => console.error('Error fetching system stats:', error));
     }
