@@ -691,6 +691,29 @@ def get_solve_status():
         return jsonify({"status": solver_status})
 
 
+def estimate_soc(voltage):
+    """Estimate the state of charge of a LiPo battery based on its voltage."""
+    if voltage >= 4.2:
+        return 100.0
+    elif voltage >= 4.1:
+        return 90.0 + (voltage - 4.1) * 100.0
+    elif voltage >= 4.0:
+        return 80.0 + (voltage - 4.0) * 10.0
+    elif voltage >= 3.9:
+        return 70.0 + (voltage - 3.9) * 10.0
+    elif voltage >= 3.8:
+        return 50.0 + (voltage - 3.8) * 20.0
+    elif voltage >= 3.7:
+        return 30.0 + (voltage - 3.7) * 20.0
+    elif voltage >= 3.6:
+        return 10.0 + (voltage - 3.6) * 20.0
+    elif voltage >= 3.5:
+        return 5.0 + (voltage - 3.5) * 10.0
+    elif voltage < 3.5 and voltage >= 3.0:
+        return (voltage - 3.0) * 5.0 / 0.5
+    else:
+        return 0.0
+
 @app.route('/system-stats')
 def system_stats():
     """Return system stats as JSON."""
@@ -709,13 +732,33 @@ def system_stats():
     voltage = "N/A"
     current = "N/A"
     low_voltage_warning = False
+    power_source = "N/A" # Default value
+    battery_time_remaining = "N/A"
     if ina219 and ina219.address is not None:
         try:
             bus_voltage = ina219.get_bus_voltage()
+            bus_current = ina219.get_current()
             voltage = f"{bus_voltage:.2f}"
-            current = f"{ina219.get_current():.2f}"
+            current = f"{bus_current:.2f}"
             if bus_voltage < 3.1:
                 low_voltage_warning = True
+
+            # Determine power source
+            if bus_voltage < 4.1 and bus_current > 100:
+                power_source = "BATTERY"
+                total_capacity_mah = 10000
+                soc = estimate_soc(bus_voltage)
+                remaining_capacity_mah = total_capacity_mah * (soc / 100.0)
+                if bus_current > 0:
+                    remaining_time_hours = remaining_capacity_mah / bus_current
+                    hours = int(remaining_time_hours)
+                    minutes = int((remaining_time_hours * 60) % 60)
+                    battery_time_remaining = f"{hours}h {minutes}m"
+                else:
+                    battery_time_remaining = "Charging"
+            else:
+                power_source = "AC"
+
         except Exception as e:
             # On the first pass, this might fail if the sensor is not
             # yet ready.   We can ignore it.
@@ -725,7 +768,9 @@ def system_stats():
                    cpu_load=load,
                    voltage=voltage,
                    current=current,
-                   low_voltage_warning=low_voltage_warning)
+                   low_voltage_warning=low_voltage_warning,
+                   power_source=power_source,
+                   battery_time_remaining=battery_time_remaining)
 
 @app.route('/set_test_mode', methods=['POST'])
 def set_test_mode():

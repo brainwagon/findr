@@ -357,6 +357,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 } else {
                     lowVoltageWarningElement.style.display = 'none';
                 }
+                document.getElementById('power-source-display').innerText = data.power_source;
+                const batteryTimeContainer = document.getElementById('battery-time-remaining-container');
+                if (data.power_source === 'BATTERY') {
+                    batteryTimeContainer.style.display = 'inline';
+                    document.getElementById('battery-time-remaining').innerText = data.battery_time_remaining;
+                } else {
+                    batteryTimeContainer.style.display = 'none';
+                }
             })
             .catch(error => console.error('Error fetching system stats:', error));
     }
