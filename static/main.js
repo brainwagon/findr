@@ -349,6 +349,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
             .then(data => {
                 document.getElementById('cpu-temp').innerText = data.cpu_temp;
                 document.getElementById('cpu-load').innerText = data.cpu_load;
+                document.getElementById('voltage').innerText = data.voltage;
+                document.getElementById('current').innerText = data.current;
             })
             .catch(error => console.error('Error fetching system stats:', error));
     }

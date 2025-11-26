@@ -24,6 +24,7 @@ This document outlines the requirements for a Raspberry Pi-based remote camera c
 - **Operating System:** A minimal Linux distribution (e.g., Raspberry Pi OS Lite).
 - **Web Server:** A lightweight web server running on the Raspberry Pi. To minimize dependencies, this could be implemented using Python's built-in `http.server` or a minimal framework like Flask or FastAPI.
 - **Camera Interface:** A library like `picamera2` for Python will be used to control the camera and capture frames.
+- **Sensor Interface:** The `smbus2` library will be used to read data from I2C sensors.
 - **Web Frontend:**
     - The web page will be built with HTML, CSS, and JavaScript.
     - To adhere to the minimal framework requirement, no large frontend frameworks (like React, Vue, or Angular) should be used.

@@ -1,11 +1,5 @@
-git+https://github.com/esa/tetra3.git
 Flask
-Pillow
-astropy
+picamera
 numpy
-pyserial
-pynmea2
-requests
-tqdm
-ephem
+pillow
 smbus2

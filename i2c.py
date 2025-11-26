@@ -2,18 +2,32 @@
 
 import smbus2
 import time
+import os
+
+def get_default_bus():
+    """Get the default I2C bus number."""
+    for busnum in range(10, -1, -1):
+        if os.path.exists(f'/dev/i2c-{busnum}'):
+            return busnum
+    return 1 # Default to 1 if no bus is found
 
 # I2C bus number to use
-I2C_BUS = 1
+I2C_BUS = get_default_bus()
 
 class I2CPeripheral:
     """Base class for an I2C peripheral."""
     def __init__(self, addr):
         self.addr = addr
-        self.bus = smbus2.SMBus(I2C_BUS)
+        try:
+            self.bus = smbus2.SMBus(I2C_BUS)
+        except (FileNotFoundError, PermissionError) as e:
+            print(f"Error opening I2C bus: {e}")
+            self.bus = None
 
     def is_present(self):
         """Check if the peripheral is present on the bus."""
+        if not self.bus:
+            return False
         try:
             self.bus.write_quick(self.addr)
             return True
@@ -37,28 +51,33 @@ class INA219(I2CPeripheral):
     INA219_REG_CURRENT = 0x04
     INA219_REG_CALIBRATION = 0x05
 
-    def __init__(self, addr=0x40):
+    def __init__(self, addr=0x43):
         super().__init__(addr)
-
-    def init(self):
+        self.shunt_ohms = 0.1
+        self.max_expected_amps = 2.0
         self._calibrate()
 
     def _calibrate(self):
         # Set configuration to default values
-        self.bus.write_i2c_block_data(self.addr, self.INA219_REG_CONFIG, [0x01, 0x9F])
+        # 16V, GAIN_AUTO, ADC_128S, ADC_128S
+        config = 0x019F
+        self.bus.write_i2c_block_data(self.addr, self.INA219_REG_CONFIG, [config >> 8, config & 0xFF])
+
         # Calibrate for 32V, 2A
-        self.bus.write_i2c_block_data(self.addr, self.INA219_REG_CALIBRATION, [0x10, 0x00])
+        cal = 4096
+        self.bus.write_i2c_block_data(self.addr, self.INA219_REG_CALIBRATION, [cal >> 8, cal & 0xFF])
+
 
     def get_value(self, name):
         if name == "voltage":
-            value = self.bus.read_i2c_block_data(self.addr, self.INA219_REG_BUSVOLTAGE, 2)
-            return ((value[0] << 8) | value[1]) >> 3 * 4 / 1000.0
+            value = self.bus.read_word_data(self.addr, self.INA219_REG_BUSVOLTAGE)
+            return ((value >> 8) & 0xFF | (value << 8) & 0xFF00) >> 3 * 4 / 1000.0
         elif name == "current":
-            value = self.bus.read_i2c_block_data(self.addr, self.INA219_REG_CURRENT, 2)
-            return ((value[0] << 8) | value[1]) / 1000.0
+            value = self.bus.read_word_data(self.addr, self.INA219_REG_CURRENT)
+            return ((value >> 8) & 0xFF | (value << 8) & 0xFF00) / 1000.0
         elif name == "power":
-            value = self.bus.read_i2c_block_data(self.addr, self.INA219_REG_POWER, 2)
-            return ((value[0] << 8) | value[1]) * 20 / 1000.0
+            value = self.bus.read_word_data(self.addr, self.INA219_REG_POWER)
+            return ((value >> 8) & 0xFF | (value << 8) & 0xFF00) * 20 / 1000.0
         else:
             return None
 

@@ -19,6 +19,122 @@ import configparser
 import csv
 import requests
 import i2c
+try:
+    from smbus2 import SMBus
+except ImportError:
+    print("The smbus2 library is not installed. Please install it.")
+    # exit(1) # exit is not needed here...
+
+# --- INA219 Configuration ---
+# Default I2C address
+INA219_ADDRESS = 0x43
+
+# Register Addresses
+INA219_REG_CONFIG = 0x00
+INA219_REG_SHUNTVOLTAGE = 0x01
+INA219_REG_BUSVOLTAGE = 0x02
+INA219_REG_POWER = 0x03
+INA219_REG_CURRENT = 0x04
+INA219_REG_CALIBRATION = 0x05
+
+# --- Configuration Settings ---
+# These settings are for a 32V, 2A range.
+# Adjust them according to your specific needs.
+# Bus Voltage Range: 0-32V
+# Shunt ADC Resolution: 12-bit, 4 samples (532us conversion time)
+# Bus ADC Resolution: 12-bit, 4 samples (532us conversion time)
+# Mode: Shunt and Bus, Continuous
+CONFIG = 0x199F
+
+# --- Calibration ---
+# This value is calculated for a 0.1-ohm shunt resistor and a max expected current of 2A.
+# See the INA219 datasheet for the calibration calculation.
+# For a 0.1 ohm shunt, and 2A max current:
+# current_lsb = 2A / 32768 = 61.035uA/bit -> round to 60uA/bit for calculation
+# cal = 0.04096 / (current_lsb * 0.1) = 0.04096 / (0.00006 * 0.1) = 6826
+# We will use a more standard value of 4096 which is for 3.2A max current and 0.1 ohm shunt
+CALIBRATION_VALUE = 4096
+# With CALIBRATION_VALUE = 4096:
+# current_lsb = 0.04096 / (4096 * 0.1) = 0.0001 A/bit (100uA/bit)
+CURRENT_LSB = 0.1  # mA per bit
+POWER_LSB = 2  # mW per bit (20 * current_lsb)
+
+
+class INA219:
+    """
+    A class to interact with the INA219 sensor directly over I2C.
+    """
+    def __init__(self, bus, address=INA219_ADDRESS):
+        self.bus = bus
+        self.address = address
+        try:
+            self.configure()
+            self.calibrate()
+        except OSError as e:
+            print(f"Error configuring or calibrating INA219: {e}")
+            self.address = None # Mark this instance as invalid
+
+    def _write_register(self, register, value):
+        """Write a 16-bit value to a register."""
+        # The INA219 expects the data in big-endian format.
+        data = [(value >> 8) & 0xFF, value & 0xFF]
+        self.bus.write_i2c_block_data(self.address, register, data)
+
+    def _read_register(self, register):
+        """Read a 16-bit value from a register."""
+        data = self.bus.read_i2c_block_data(self.address, register, 2)
+        return (data[0] << 8) | data[1]
+
+    def configure(self):
+        """Configure the INA219 with the default settings."""
+        self._write_register(INA219_REG_CONFIG, CONFIG)
+
+    def calibrate(self):
+        """Set the calibration register."""
+        self._write_register(INA219_REG_CALIBRATION, CALIBRATION_VALUE)
+
+    def get_bus_voltage(self):
+        """
+        Reads the bus voltage.
+        The LSB is 4mV. The result is shifted right by 3 bits.
+        """
+        raw_value = self._read_register(INA219_REG_BUSVOLTAGE)
+        # Check for conversion ready bit
+        if (raw_value & 0x0002) == 0:
+            return 0.0
+        # Shift right 3 to remove status bits and get the voltage reading
+        voltage_reading = (raw_value >> 3) * 4
+        return voltage_reading / 1000.0  # Convert mV to V
+
+    def get_shunt_voltage(self):
+        """
+        Reads the shunt voltage.
+        The LSB is 10uV. Result is in mV.
+        """
+        raw_value = self._read_register(INA219_REG_SHUNTVOLTAGE)
+        # Convert to signed value if necessary
+        if raw_value > 32767:
+            raw_value -= 65536
+        return raw_value * 0.01  # Convert 10uV steps to mV
+
+    def get_current(self):
+        """Reads the current from the sensor in mA."""
+        raw_current = self._read_register(INA219_REG_CURRENT)
+        # Convert to signed value if necessary
+        if raw_current > 32767:
+            raw_current -= 65536
+        return raw_current * CURRENT_LSB
+
+# --- End of INA219 Class ---
+
+# Try to initialize the INA219 sensor
+try:
+    i2c_bus = SMBus(1)
+    ina219 = INA219(i2c_bus)
+    print("INA219 sensor initialized.")
+except (FileNotFoundError, NameError):
+    ina219 = None
+    print("I2C bus not found or smbus2 not installed. INA219 sensor disabled.")
 
 # Create a new ephem observer
 observer = ephem.Observer()
@@ -162,11 +278,14 @@ app = Flask(__name__)
 
 import atexit
 
-def close_camera():
-    """Close the camera on exit."""
+def cleanup():
+    """Close the camera and I2C bus on exit."""
     camera.close()
+    if ina219:
+        i2c_bus.close()
+    print("Camera and I2C bus closed.")
 
-atexit.register(close_camera)
+atexit.register(cleanup)
 
 # Solver status
 solver_status = "idle"
@@ -174,12 +293,79 @@ solver_result = {}
 test_mode = False # Global variable for test mode
 is_paused = False # Global variable for pause state
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+def gen_frames():
+    """Generate frames for video stream."""
+    while True:
+        if latest_frame_bytes:
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + latest_frame_bytes + b'\r\n')
+        time.sleep(0.05) # control the frame rate
+
+@app.route('/video_feed')
+def video_feed():
+    """Video streaming route. Put this in the src attribute of an img tag."""
+    return Response(gen_frames(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
 @app.route('/toggle_pause', methods=['POST'])
 def toggle_pause():
     """Toggle the paused state."""
     global is_paused
     is_paused = not is_paused
     return jsonify({"is_paused": is_paused})
+
+@app.route('/get_pause_state')
+def get_pause_state():
+    """Return the pause state."""
+    return jsonify({"is_paused": is_paused})
+
+@app.route('/get_fps')
+def get_fps():
+    """Return the current FPS."""
+    return jsonify({"fps": f"{current_fps:.2f}"})
+
+@app.route('/get_solve_fps')
+def get_solve_fps():
+    """Return the solve FPS."""
+    return jsonify({"fps": f"{solve_fps:.2f}"})
+
+@app.route('/set_controls', methods=['POST'])
+def set_controls():
+    """Set camera controls."""
+    data = request.json
+    safe_set_controls(data)
+    return "", 204
+
+@app.route('/capture_lores_jpeg')
+def capture_lores_jpeg():
+    """Capture a lores JPEG."""
+    if latest_frame_bytes:
+        return Response(latest_frame_bytes, mimetype='image/jpeg')
+    return "No frame available", 404
+
+@app.route('/snapshot')
+def snapshot():
+    """Capture a full resolution JPEG."""
+    buffer = io.BytesIO()
+    camera.capture_file(buffer, name='main', format='jpeg')
+    return Response(buffer.getvalue(), mimetype='image/jpeg')
+
+@app.route('/solved_field.jpg')
+def solved_field():
+    """Return the solved field image."""
+    with solved_image_lock:
+        if solved_image_bytes:
+            return Response(solved_image_bytes, mimetype='image/jpeg')
+    # Return a black image if no solved image is available
+    img = Image.new('RGB', (640, 480), color = 'black')
+    buf = io.BytesIO()
+    img.save(buf, format='JPEG')
+    return Response(buf.getvalue(), mimetype='image/jpeg')
+
 
 # Global variables for video feed and FPS
 latest_frame_bytes = None
@@ -235,10 +421,7 @@ def capture_and_process_frames():
             # or handle the error in a way that doesn't crash the thread.
             time.sleep(1) # Wait a bit before retrying to avoid spamming errors
 
-# Start the frame capture and processing in a separate thread
-frame_capture_thread = threading.Thread(target=capture_and_process_frames)
-frame_capture_thread.daemon = True
-frame_capture_thread.start()
+
 
 # In-memory storage for the solved image bytes to avoid writing to disk.
 # Access guarded by solved_image_lock.
@@ -499,8 +682,20 @@ def system_stats():
             load = f.read().split()[0]
     except IOError:
         load = 'N/A'
+    
+    voltage = "N/A"
+    current = "N/A"
+    if ina219 and ina219.address is not None:
+        try:
+            voltage = f"{ina219.get_bus_voltage():.2f}"
+            current = f"{ina219.get_current():.2f}"
+        except Exception as e:
+            # On the first pass, this might fail if the sensor is not
+            # yet ready.   We can ignore it.
+            pass
 
-    return jsonify(cpu_temp=f"{temp:.1f}", cpu_load=load)
+
+    return jsonify(cpu_temp=f"{temp:.1f}", cpu_load=load, voltage=voltage, current=current)
 
 @app.route('/set_test_mode', methods=['POST'])
 def set_test_mode():
@@ -549,164 +744,12 @@ def safe_set_controls(controls):
 
 safe_set_controls(initial_controls)
 
+frame_capture_thread = threading.Thread(target=capture_and_process_frames)
+frame_capture_thread.daemon = True
+frame_capture_thread.start()
 
-
-@app.route('/get_fps')
-def get_fps():
-    """Return the current FPS."""
-    return jsonify(fps=f"{current_fps:.1f}")
-
-@app.route('/get_solve_fps')
-def get_solve_fps():
-    """Return the current solve FPS."""
-    return jsonify(fps=f"{solve_fps:.1f}")
-
-@app.route('/get_pause_state')
-def get_pause_state():
-    """Return the current pause state."""
-    global is_paused
-    return jsonify(is_paused=is_paused)
-
-@app.route('/')
-def index():
-    """Return the main page with initial slider values."""
-    global test_mode
-    # Get camera properties
-    camera_properties = camera.camera_properties
-    model = camera_properties.get("Model", "Unknown")
-    pixel_array_size = camera_properties.get("PixelArraySize", "Unknown")
-
-    # Get current camera controls
-    current_controls = camera.controls
-
-    # Map current camera values to slider values (0-100)
-    slider_values = {}
-
-    # AnalogueGain
-    current_gain = getattr(current_controls, "AnalogueGain", 1.0)
-    slider_values['gain'] = int(current_gain)
-
-    # ExposureTime
-    exposure_times = [1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000]
-    current_exposure = getattr(current_controls, "ExposureTime", 10000)
-    # Find the index of the closest exposure time
-    exposure_index = min(range(len(exposure_times)), key=lambda i: abs(exposure_times[i] - current_exposure))
-    slider_values['exposure_index'] = exposure_index
-    slider_values['exposure_times'] = exposure_times
-
-    # Brightness
-    min_bright, max_bright, _ = camera.camera_controls.get("Brightness", (-1.0, 1.0, 0.0))
-    current_brightness = getattr(current_controls, "Brightness", 0.0)
-    slider_values['brightness'] = int(((current_brightness - min_bright) / (max_bright - min_bright)) * 100) if (max_bright - min_bright) != 0 else 0
-
-    # Contrast
-    min_contrast, max_contrast, _ = camera.camera_controls.get("Contrast", (0.0, 32.0, 1.0))
-    current_contrast = getattr(current_controls, "Contrast", 1.0)
-    slider_values['contrast'] = int(((current_contrast - min_contrast) / (max_contrast - min_contrast)) * 100) if (max_contrast - min_contrast) != 0 else 0
-
-    # Sharpness
-    min_sharp, max_sharp, _ = camera.camera_controls.get("Sharpness", (0.0, 16.0, 1.0))
-    current_sharpness = getattr(current_controls, "Sharpness", 1.0)
-    slider_values['sharpness'] = int(((current_sharpness - min_sharp) / (max_sharp - min_sharp)) * 100) if (max_sharp - min_sharp) != 0 else 0
-
-
-
-    return render_template('index.html', model=model, pixel_array_size=pixel_array_size, test_mode=test_mode, **slider_values)
-
-@app.route('/video_feed')
-def video_feed():
-    """Return the latest video frame."""
-    global latest_frame_bytes
-    if latest_frame_bytes:
-        return Response(latest_frame_bytes, mimetype='image/jpeg')
-    return "", 204 # No content if no frame is available yet
-
-@app.route('/capture_lores_jpeg')
-def capture_lores_jpeg():
-    """Capture a lores (640x480) JPEG image."""
-    buffer = io.BytesIO()
-    camera.capture_file(buffer, name='lores', format='jpeg')
-    frame = buffer.getvalue()
-    return Response(frame, mimetype='image/jpeg')
-
-@app.route('/snapshot')
-def snapshot():
-    """Capture a full resolution (1456x1088) JPEG image."""
-    buffer = io.BytesIO()
-    camera.capture_file(buffer, name='main', format='jpeg')
-    frame = buffer.getvalue()
-    return Response(frame, mimetype='image/jpeg')
-
-@app.route('/set_controls', methods=['POST'])
-def set_controls():
-    """Set camera controls."""
-    data = request.json
-    
-    controls_to_set = {"AeEnable": False} # Disable auto exposure when setting manual controls
-
-    if 'gain' in data:
-        gain = float(data.get('gain'))
-        controls_to_set["AnalogueGain"] = gain
-
-    if 'exposure_index' in data:
-        exposure_times = [1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000]
-        exposure_index = int(data.get('exposure_index', 0))
-        exposure_time = exposure_times[exposure_index]
-        controls_to_set["ExposureTime"] = exposure_time
-
-    if 'brightness' in data:
-        brightness = float(data.get('brightness'))
-        min_bright, max_bright, _ = camera.camera_controls.get("Brightness", (-1.0, 1.0, 0.0))
-        brightness_val = min_bright + (brightness / 100.0) * (max_bright - min_bright)
-        controls_to_set["Brightness"] = brightness_val
-
-    if 'contrast' in data:
-        contrast = float(data.get('contrast'))
-        min_contrast, max_contrast, _ = camera.camera_controls.get("Contrast", (0.0, 32.0, 1.0))
-        contrast_val = min_contrast + (contrast / 100.0) * (max_contrast - min_contrast)
-        controls_to_set["Contrast"] = contrast_val
-
-    if 'sharpness' in data:
-        sharpness = float(data.get('sharpness'))
-        min_sharp, max_sharp, _ = camera.camera_controls.get("Sharpness", (0.0, 16.0, 1.0))
-        sharpness_val = min_sharp + (sharpness / 100.0) * (max_sharp - min_sharp)
-        controls_to_set["Sharpness"] = sharpness_val
-
-    if 'ScalerCrop' in data:
-        scaler_crop = data.get('ScalerCrop')
-        # Ensure scaler_crop is a tuple/list of 4 integers
-        if isinstance(scaler_crop, list) and len(scaler_crop) == 4 and all(isinstance(x, int) for x in scaler_crop):
-            controls_to_set["ScalerCrop"] = tuple(scaler_crop)
-        else:
-            print(f"Warning: Invalid ScalerCrop value received: {scaler_crop}")
-
-    safe_set_controls(controls_to_set)
-    return "", 204
-
-@app.route('/solved_field.jpg')
-def serve_solved_image():
-    """Serve the most recent solved image from memory (avoids writing to disk)."""
-    with solved_image_lock:
-        if solved_image_bytes:
-            return Response(solved_image_bytes, mimetype='image/jpeg')
-        else:
-            return "", 404
-
-@app.route('/api/i2c')
-def i2c_status():
-    """Return the status of I2C peripherals."""
-    status = {}
-    for peripheral in i2c.get_detected_peripherals():
-        status[peripheral] = {}
-        for value_name in i2c.get_peripheral_value_names(peripheral):
-            status[peripheral][value_name] = i2c.get_peripheral_value(peripheral, value_name)
-    return jsonify(status)
-
-if __name__ == '__main__':
-    load_constellation_boundaries()
-    i2c.init_peripherals()
-    solve_fps_thread = threading.Thread(target=calculate_solve_fps)
-    solve_fps_thread.daemon = True
-    solve_fps_thread.start()
-    logging.getLogger("werkzeug").setLevel(logging.WARNING)
-    app.run(host='0.0.0.0', port=8080, threaded=True)
+solve_fps_thread = threading.Thread(target=calculate_solve_fps)
+solve_fps_thread.daemon = True
+solve_fps_thread.start()
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+app.run(host='0.0.0.0', port=8080, threaded=True)
