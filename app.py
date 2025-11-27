@@ -276,6 +276,8 @@ from picamera2 import Picamera2
 
 app = Flask(__name__)
 
+exposure_times = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]
+
 import atexit
 
 def cleanup():
@@ -300,8 +302,10 @@ def index():
     # i just want to pass some variables to the template...
     # i'll fix this later.
     gain = 1
-    exposure_index = 0
-    exposure_times = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]
+    try:
+        exposure_index = exposure_times.index(10000)
+    except ValueError:
+        exposure_index = 2
     brightness = 50
     contrast = 50
     sharpness = 50
@@ -360,7 +364,39 @@ def get_solve_fps():
 def set_controls():
     """Set camera controls."""
     data = request.json
-    safe_set_controls(data)
+    
+    # map the controls from the UI to the camera controls
+    #
+    # UI                Camera
+    # ----------------- ----------------
+    # gain              AnalogueGain
+    # exposure_index    ExposureTime
+    # brightness        Brightness (-1.0 to 1.0)
+    # contrast          Contrast (0.0 to 2.0)
+    #
+    
+    controls_to_set = {}
+    
+    if 'gain' in data:
+        controls_to_set['AnalogueGain'] = float(data['gain'])
+        
+    if 'exposure_index' in data and data['exposure_index'] != '':
+        try:
+            exposure_idx = int(data['exposure_index'])
+            if 0 <= exposure_idx < len(exposure_times):
+                controls_to_set['ExposureTime'] = exposure_times[exposure_idx]
+        except (ValueError, TypeError):
+            pass # Ignore if not a valid index
+
+    if 'brightness' in data:
+        # scale from 0-100 to -1.0 to 1.0
+        controls_to_set['Brightness'] = float(data['brightness']) / 50.0 - 1.0
+
+    if 'contrast' in data:
+        # scale from 0-100 to 0.0 to 2.0
+        controls_to_set['Contrast'] = float(data['contrast']) / 50.0
+
+    safe_set_controls(controls_to_set)
     return "", 204
 
 @app.route('/capture_lores_jpeg')
