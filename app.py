@@ -396,6 +396,9 @@ def set_controls():
         # scale from 0-100 to 0.0 to 2.0
         controls_to_set['Contrast'] = float(data['contrast']) / 50.0
 
+    if 'ScalerCrop' in data:
+        controls_to_set['ScalerCrop'] = data['ScalerCrop']
+
     safe_set_controls(controls_to_set)
     return "", 204
 
