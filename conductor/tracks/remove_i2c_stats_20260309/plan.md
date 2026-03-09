@@ -10,15 +10,15 @@
     - [ ] Remove `smbus2`
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Dependency & File Cleanup' (Protocol in workflow.md) (52a0df5)
 
-## Phase 2: Backend Refactoring
+## Phase 2: Backend Refactoring [checkpoint: afdc2b2]
 *Goal: Remove references to the deleted modules and associated routes from the Flask application.*
 
-- [~] Task: Refactor `app.py`
-    - [ ] Remove imports for `ina219_reader` and `i2c`.
-    - [ ] Remove `ina219` initialization and `estimate_soc` function.
-    - [ ] Remove the `@app.route('/system-stats')` endpoint.
-    - [ ] Ensure any logic that relied on these stats is safely removed or bypassed.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Backend Refactoring' (Protocol in workflow.md)
+- [x] Task: Refactor `app.py`
+    - [x] Remove imports for `ina219_reader` and `i2c`.
+    - [x] Remove `ina219` initialization and `estimate_soc` function.
+    - [x] Remove the `@app.route('/system-stats')` endpoint.
+    - [x] Ensure any logic that relied on these stats is safely removed or bypassed.
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Backend Refactoring' (Protocol in workflow.md) (afdc2b2)
 
 ## Phase 3: Frontend & UI Cleanup
 *Goal: Clean up the user interface and JavaScript logic.*
