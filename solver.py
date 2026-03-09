@@ -1,10 +1,21 @@
 import tetra3
 from PIL import Image
 import logging
+from abc import ABC, abstractmethod
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+class BaseSolver(ABC):
+    @abstractmethod
+    def solve(self, image_path_or_obj):
+        """
+        Solve the plate for a given image.
+        :param image_path_or_obj: Path to the image file or a PIL Image object.
+        :return: A dictionary containing the solve results or None if failed.
+        """
+        pass
 
 class PlateSolver:
     def __init__(self, database_path='default_database'):
