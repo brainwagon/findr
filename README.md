@@ -6,106 +6,76 @@
 
 **⚠️ Warning: This project is a work in progress and a prototype. It is not fully functional or robust and should not be used in production environments. ⚠️**
 
-This project provides a web-based interface to control a Raspberry Pi camera remotely. It runs a Flask web server on the Pi, allowing you to view a live stream and adjust camera settings from any web browser on the same network.
-
-**⚠️ When I first started developing this, I noticed that there was a 
-substantial amount of noise, which took the appearance of many horizontal lines
-in the captured imagery, especially when the gain was set to be values greater
-than one.   A bit of digging around revealed that it was likely caused
-by power supply noise on the 3.3v rail, but that there was an option I could
-add to `/boot/firmware/config.txt` that would fix it, and for once, it 
-actually did work.  You probably want to add this line to `/boot/config.txt':
-
-```
-power_force_3v3_pwm=1
-```
+This project provides a web-based interface for a Raspberry Pi-based telescope finder. It includes a live camera stream, manual camera controls, and integrated **plate solving** to automatically identify where the telescope is pointing.
 
 ## Features
 
-- **Web-Based Interface:** Control your camera from a simple web page.
-- **Live Video Stream:** View a real-time MJPEG stream from the camera.
-- **Camera Controls:** Adjust settings like gain, exposure, and white balance.
-- **Headless Operation:** Runs on a Raspberry Pi without a monitor or keyboard.
-- **Development Mode:** Includes a dummy camera interface for development on non-Pi machines.
+- **Plate Solving:** Uses the `tetra3` library to identify star fields and return RA/Dec coordinates, roll, and FOV.
+- **Star Identification:** Annotates solved images with star names (Simbad/Greek designations).
+- **Constellation Boundaries:** Automatically draws constellation boundaries on solved fields using `astropy` and `pyephem`.
+- **System Monitoring:** Real-time monitoring of CPU temperature, load, and power stats (via INA219 if available).
+- **Web-Based Interface:** Control camera settings (gain, exposure, etc.) and trigger solves from any browser.
+- **Hybrid Camera Support:** Automatically uses `Picamera2` on Raspberry Pi hardware, falling back to a dummy camera for development on other platforms.
 
+## Hardware Optimization
 
+If you experience horizontal noise lines in your captured images (especially at high gain), it is likely power supply noise on the 3.3V rail. Adding the following line to `/boot/firmware/config.txt` (or `/boot/config.txt`) often resolves this:
 
+```
+dtparam=power_force_3v3_pwm=1
+```
 
 ## Project Structure
 
 ```
 .
-├── app.py                  # Main Flask application
-├── camera_dummy.py         # Dummy camera for development
-├── requirements.txt        # Python dependencies
-├── static
-│   ├── main.js             # Client-side JavaScript
-│   └── style.css           # Stylesheet
-└── templates
-    └── index.html          # Main HTML page
+├── app.py                  # Main Flask application and web server
+├── solver.py               # PlateSolver abstraction layer
+├── camera_dummy.py         # Dummy camera interface for non-Pi development
+├── requirements.txt        # Python dependencies (excluding system libraries)
+├── bound_20.dat            # Constellation boundary data
+├── ids.csv                 # Star identification database
+├── static/                 # CSS and JavaScript assets
+└── templates/              # HTML templates (Flask)
 ```
 
 ## Installation and Usage
 
-There are two ways to run this project: on a development machine (like a laptop) or on a Raspberry Pi.
+### 1. Clone the Repository
+```bash
+git clone <repository-url>
+cd findr
+```
 
-### On a Development Machine (Non-Pi)
+### 2. Environment Setup
 
-This setup uses a dummy camera feed, allowing you to work on the web interface without a Raspberry Pi.
+#### On a Raspberry Pi (Recommended)
+To use the actual camera hardware, you must allow the virtual environment to access system-site packages (where `libcamera` and `picamera2` are typically installed).
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd <repository-directory>
-    ```
+```bash
+# Create venv with system site packages
+python3 -m venv --system-site-packages venv
+source venv/bin/activate
 
-2.  **Create and activate a virtual environment (recommended):**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
+# Install dependencies
+pip install -r requirements.txt
+```
 
-3.  **Install the dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+#### On a Development Machine (Non-Pi)
+If you are just working on the UI or solver logic using test images:
 
-4.  **Run the application:**
-    ```bash
-    python app.py
-    ```
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-5.  Open your web browser and go to `http://127.0.0.1:8080` to see the interface with the dummy camera feed.
+### 3. Run the Application
+```bash
+python3 app.py
+```
+Access the interface at `http://<ip-address>:8080`.
 
-### On a Raspberry Pi
-
-This setup uses the actual Raspberry Pi camera.
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd <repository-directory>
-    ```
-
-2.  **Create and activate a virtual environment (recommended):**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate
-    ```
-
-3.  **Install the dependencies from `requirements.txt`:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Install the `picamera2` library:**
-    ```bash
-    pip install picamera2
-    ```
-
-5.  **Run the application:**
-    ```bash
-    python app.py
-    ```
-
-6.  Find your Raspberry Pi's IP address (e.g., by running `hostname -I`) and open a web browser on another device on the same network. Go to `http://<your-pi-ip-address>:8080`.
+## Plate Solving Notes
+- The solver uses `tetra3`. Ensure you have a valid tetra3 database installed (it will attempt to load the default one if available).
+- Use **Test Mode** in the web interface to cycle through pre-loaded images in the `test-images/` directory to verify solver performance without live hardware.
