@@ -7,7 +7,7 @@
     - [ ] `git submodule deinit -f tetra3-repo`
     - [ ] `rm -rf .git/modules/tetra3-repo`
     - [ ] `git rm -f tetra3-repo`
-- [ ] Task: Delete legacy patches and documentation
+- [x] Task: Delete legacy patches and documentation (fbc5148)
     - [ ] Delete `patches/tetra3_numpy2.patch`
     - [ ] Delete `docs/tetra3_patch.md`
     - [ ] Delete `docs/research_tetra3.md` (if relevant)
