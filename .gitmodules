@@ -1,0 +1,6 @@
+[submodule "cedar-solve"]
+	path = cedar-solve
+	url = https://github.com/brainwagon/cedar-solve.git
+[submodule "tetra3-repo"]
+	path = tetra3-repo
+	url = https://github.com/brainwagon/tetra3.git
