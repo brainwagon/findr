@@ -74,8 +74,21 @@ pip install -r requirements.txt
 ```bash
 python3 app.py
 ```
-Access the interface at `http://<ip-address>:8080`.
+Access the interface at `http://findr.local:8080` (or your Pi's actual hostname).
 
-## Plate Solving Notes
+## Network Access (mDNS/Avahi)
+This project is configured to work with **Avahi/mDNS**, allowing you to access the web interface using a friendly hostname instead of an IP address. 
+
+To ensure this works:
+1.  **Install Avahi** (if not already installed):
+    ```bash
+    sudo apt update
+    sudo apt install avahi-daemon
+    ```
+2.  **Verify Service Status:**
+    ```bash
+    sudo systemctl enable --now avahi-daemon
+    ```
+3.  **Access:** Once running, you can find your device at `http://<your-hostname>.local:8080`.
 - The solver uses `tetra3`. Ensure you have a valid tetra3 database installed (it will attempt to load the default one if available).
 - Use **Test Mode** in the web interface to cycle through pre-loaded images in the `test-images/` directory to verify solver performance without live hardware.
