@@ -1,6 +1,6 @@
 # Implementation Plan: Modularize Plate Solving
 
-## Phase 1: Foundation & Modularization (ABC & tetra3)
+## Phase 1: Foundation & Modularization (ABC & tetra3) [checkpoint: 7116b93]
 *Goal: Define a common interface and refactor existing tetra3 logic into a concrete class.*
 
 - [x] Task: Create `BaseSolver` Abstract Base Class in `solver.py` (e1a8b18)
