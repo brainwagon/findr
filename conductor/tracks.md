@@ -2,5 +2,5 @@
 
 ---
 
-- [ ] **Track: Modularize plate solving to support tetra3 and cedar-solve**
+- [~] **Track: Modularize plate solving to support tetra3 and cedar-solve**
 *Link: [./tracks/modularize_plate_solving_20260308/](./tracks/modularize_plate_solving_20260308/)*

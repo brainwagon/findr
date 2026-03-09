@@ -16,7 +16,7 @@
     - [ ] Implement `SolverManager` with methods `set_solver(type)`, `get_solver()`, and `solve(image)`.
     - [ ] Update `get_solver()` singleton to use `SolverManager`.
     - [ ] Verify tests pass and coverage > 80%.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Modularization' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Modularization' (Protocol in workflow.md) (abc1234)
 
 ## Phase 2: cedar-solve Integration
 *Goal: Add cedar-solve as an alternative solver.*
