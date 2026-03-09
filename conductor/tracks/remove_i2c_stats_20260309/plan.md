@@ -23,7 +23,7 @@
 ## Phase 3: Frontend & UI Cleanup
 *Goal: Clean up the user interface and JavaScript logic.*
 
-- [ ] Task: Update `templates/index.html`
+- [~] Task: Update `templates/index.html`
     - [ ] Remove the system stats display elements (CPU, Voltage, etc.) from the footer.
 - [ ] Task: Update `static/main.js`
     - [ ] Remove the `updateSystemStats` function.
