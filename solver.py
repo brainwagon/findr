@@ -66,14 +66,63 @@ class Tetra3Solver(BaseSolver):
             logger.error(f"Error during plate solving: {e}")
             return None
 
+class SolverManager(BaseSolver):
+    def __init__(self, default_solver_type='tetra3'):
+        self._solvers = {}
+        self._current_solver_type = None
+        self._current_solver_instance = None
+        
+        # Register available solvers
+        self.register_solver('tetra3', Tetra3Solver)
+        # cedar-solve will be registered later in Phase 2
+        
+        try:
+            self.set_solver(default_solver_type)
+        except Exception as e:
+            logger.error(f"Failed to set default solver {default_solver_type}: {e}")
+
+    def register_solver(self, solver_type, solver_class):
+        """Register a new solver class."""
+        self._solvers[solver_type] = solver_class
+        logger.info(f"Registered solver: {solver_type}")
+
+    def set_solver(self, solver_type):
+        """Switch to a different solver type."""
+        if solver_type not in self._solvers:
+            raise ValueError(f"Unknown solver type: {solver_type}")
+        
+        if solver_type == self._current_solver_type:
+            return
+
+        logger.info(f"Switching solver to: {solver_type}...")
+        self._current_solver_type = solver_type
+        # Lazy initialization of the solver instance
+        self._current_solver_instance = self._solvers[solver_type]()
+        logger.info(f"Active solver is now: {solver_type}")
+
+    def get_current_solver_type(self):
+        """Get the current active solver type."""
+        return self._current_solver_type
+
+    def get_current_solver(self):
+        """Get the current active solver instance."""
+        return self._current_solver_instance
+
+    def solve(self, image_path_or_obj):
+        """Delegate solving to the current active solver."""
+        if self._current_solver_instance:
+            return self._current_solver_instance.solve(image_path_or_obj)
+        logger.error("No active solver instance to handle solve request.")
+        return None
+
 # For backward compatibility
 PlateSolver = Tetra3Solver
 
 # Simple singleton instance for global use
-_solver_instance = None
+_solver_manager_instance = None
 
 def get_solver():
-    global _solver_instance
-    if _solver_instance is None:
-        _solver_instance = Tetra3Solver()
-    return _solver_instance
+    global _solver_manager_instance
+    if _solver_manager_instance is None:
+        _solver_manager_instance = SolverManager()
+    return _solver_manager_instance

@@ -1,6 +1,6 @@
 import unittest
 import os
-from solver import PlateSolver, Tetra3Solver
+from solver import PlateSolver, Tetra3Solver, SolverManager
 
 class TestPlateSolver(unittest.TestCase):
     def setUp(self):
@@ -39,11 +39,13 @@ class TestPlateSolver(unittest.TestCase):
 
     def test_get_solver_singleton(self):
         """Test that get_solver returns the same singleton instance."""
-        from solver import get_solver
+        from solver import get_solver, SolverManager
         s1 = get_solver()
         s2 = get_solver()
         self.assertIs(s1, s2)
-        self.assertTrue(isinstance(s1, Tetra3Solver))
+        self.assertIsInstance(s1, SolverManager)
+        # It should still act as a solver (duck typing or interface)
+        self.assertTrue(hasattr(s1, 'solve'))
 
 if __name__ == '__main__':
     unittest.main()
