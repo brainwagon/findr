@@ -13,7 +13,7 @@
 ## Phase 2: Backend Refactoring
 *Goal: Remove references to the deleted modules and associated routes from the Flask application.*
 
-- [ ] Task: Refactor `app.py`
+- [~] Task: Refactor `app.py`
     - [ ] Remove imports for `ina219_reader` and `i2c`.
     - [ ] Remove `ina219` initialization and `estimate_soc` function.
     - [ ] Remove the `@app.route('/system-stats')` endpoint.

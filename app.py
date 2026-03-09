@@ -17,124 +17,7 @@ import ephem
 import configparser
 import csv
 import requests
-import i2c
 from solver import get_solver
-try:
-    from smbus2 import SMBus
-except ImportError:
-    print("The smbus2 library is not installed. Please install it.")
-    # exit(1) # exit is not needed here...
-
-# --- INA219 Configuration ---
-# Default I2C address
-INA219_ADDRESS = 0x43
-
-# Register Addresses
-INA219_REG_CONFIG = 0x00
-INA219_REG_SHUNTVOLTAGE = 0x01
-INA219_REG_BUSVOLTAGE = 0x02
-INA219_REG_POWER = 0x03
-INA219_REG_CURRENT = 0x04
-INA219_REG_CALIBRATION = 0x05
-
-# --- Configuration Settings ---
-# These settings are for a 32V, 2A range.
-# Adjust them according to your specific needs.
-# Bus Voltage Range: 0-32V
-# Shunt ADC Resolution: 12-bit, 4 samples (532us conversion time)
-# Bus ADC Resolution: 12-bit, 4 samples (532us conversion time)
-# Mode: Shunt and Bus, Continuous
-CONFIG = 0x199F
-
-# --- Calibration ---
-# This value is calculated for a 0.1-ohm shunt resistor and a max expected current of 2A.
-# See the INA219 datasheet for the calibration calculation.
-# For a 0.1 ohm shunt, and 2A max current:
-# current_lsb = 2A / 32768 = 61.035uA/bit -> round to 60uA/bit for calculation
-# cal = 0.04096 / (current_lsb * 0.1) = 0.04096 / (0.00006 * 0.1) = 6826
-# We will use a more standard value of 4096 which is for 3.2A max current and 0.1 ohm shunt
-CALIBRATION_VALUE = 4096
-# With CALIBRATION_VALUE = 4096:
-# current_lsb = 0.04096 / (4096 * 0.1) = 0.0001 A/bit (100uA/bit)
-CURRENT_LSB = 0.1  # mA per bit
-POWER_LSB = 2  # mW per bit (20 * current_lsb)
-
-
-class INA219:
-    """
-    A class to interact with the INA219 sensor directly over I2C.
-    """
-    def __init__(self, bus, address=INA219_ADDRESS):
-        self.bus = bus
-        self.address = address
-        try:
-            self.configure()
-            self.calibrate()
-        except OSError as e:
-            print(f"Error configuring or calibrating INA219: {e}")
-            self.address = None # Mark this instance as invalid
-
-    def _write_register(self, register, value):
-        """Write a 16-bit value to a register."""
-        # The INA219 expects the data in big-endian format.
-        data = [(value >> 8) & 0xFF, value & 0xFF]
-        self.bus.write_i2c_block_data(self.address, register, data)
-
-    def _read_register(self, register):
-        """Read a 16-bit value from a register."""
-        data = self.bus.read_i2c_block_data(self.address, register, 2)
-        return (data[0] << 8) | data[1]
-
-    def configure(self):
-        """Configure the INA219 with the default settings."""
-        self._write_register(INA219_REG_CONFIG, CONFIG)
-
-    def calibrate(self):
-        """Set the calibration register."""
-        self._write_register(INA219_REG_CALIBRATION, CALIBRATION_VALUE)
-
-    def get_bus_voltage(self):
-        """
-        Reads the bus voltage.
-        The LSB is 4mV. The result is shifted right by 3 bits.
-        """
-        raw_value = self._read_register(INA219_REG_BUSVOLTAGE)
-        # Check for conversion ready bit
-        if (raw_value & 0x0002) == 0:
-            return 0.0
-        # Shift right 3 to remove status bits and get the voltage reading
-        voltage_reading = (raw_value >> 3) * 4
-        return voltage_reading / 1000.0  # Convert mV to V
-
-    def get_shunt_voltage(self):
-        """
-        Reads the shunt voltage.
-        The LSB is 10uV. Result is in mV.
-        """
-        raw_value = self._read_register(INA219_REG_SHUNTVOLTAGE)
-        # Convert to signed value if necessary
-        if raw_value > 32767:
-            raw_value -= 65536
-        return raw_value * 0.01  # Convert 10uV steps to mV
-
-    def get_current(self):
-        """Reads the current from the sensor in mA."""
-        raw_current = self._read_register(INA219_REG_CURRENT)
-        # Convert to signed value if necessary
-        if raw_current > 32767:
-            raw_current -= 65536
-        return raw_current * CURRENT_LSB
-
-# --- End of INA219 Class ---
-
-# Try to initialize the INA219 sensor
-try:
-    i2c_bus = SMBus(1)
-    ina219 = INA219(i2c_bus)
-    print("INA219 sensor initialized.")
-except (FileNotFoundError, NameError):
-    ina219 = None
-    print("I2C bus not found or smbus2 not installed. INA219 sensor disabled.")
 
 # Create a new ephem observer
 observer = ephem.Observer()
@@ -294,11 +177,9 @@ exposure_times = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 10000
 import atexit
 
 def cleanup():
-    """Close the camera and I2C bus on exit."""
+    """Close the camera on exit."""
     camera.close()
-    if ina219:
-        i2c_bus.close()
-    print("Camera and I2C bus closed.")
+    print("Camera closed.")
 
 atexit.register(cleanup)
 
@@ -669,88 +550,6 @@ def get_solve_status():
         return jsonify({"status": solver_status, **solver_result})
     else:
         return jsonify({"status": solver_status})
-
-
-def estimate_soc(voltage):
-    """Estimate the state of charge of a LiPo battery based on its voltage."""
-    if voltage >= 4.2:
-        return 100.0
-    elif voltage >= 4.1:
-        return 90.0 + (voltage - 4.1) * 100.0
-    elif voltage >= 4.0:
-        return 80.0 + (voltage - 4.0) * 10.0
-    elif voltage >= 3.9:
-        return 70.0 + (voltage - 3.9) * 10.0
-    elif voltage >= 3.8:
-        return 50.0 + (voltage - 3.8) * 20.0
-    elif voltage >= 3.7:
-        return 30.0 + (voltage - 3.7) * 20.0
-    elif voltage >= 3.6:
-        return 10.0 + (voltage - 3.6) * 20.0
-    elif voltage >= 3.5:
-        return 5.0 + (voltage - 3.5) * 10.0
-    elif voltage < 3.5 and voltage >= 3.0:
-        return (voltage - 3.0) * 5.0 / 0.5
-    else:
-        return 0.0
-
-@app.route('/system-stats')
-def system_stats():
-    """Return system stats as JSON."""
-    try:
-        with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
-            temp = int(f.read().strip()) / 1000.0
-    except IOError:
-        temp = 'N/A'
-
-    try:
-        with open('/proc/loadavg', 'r') as f:
-            load = f.read().split()[0]
-    except IOError:
-        load = 'N/A'
-
-    voltage = "N/A"
-    current = "N/A"
-    low_voltage_warning = False
-    power_source = "N/A" # Default value
-    battery_time_remaining = "N/A"
-    if ina219 and ina219.address is not None:
-        try:
-            bus_voltage = ina219.get_bus_voltage()
-            bus_current = ina219.get_current()
-            voltage = f"{bus_voltage:.2f}"
-            current = f"{bus_current:.2f}"
-            if bus_voltage < 3.1:
-                low_voltage_warning = True
-
-            # Determine power source
-            if bus_voltage < 4.1 and bus_current > 100:
-                power_source = "BATTERY"
-                total_capacity_mah = 10000
-                soc = estimate_soc(bus_voltage)
-                remaining_capacity_mah = total_capacity_mah * (soc / 100.0)
-                if bus_current > 0:
-                    remaining_time_hours = remaining_capacity_mah / bus_current
-                    hours = int(remaining_time_hours)
-                    minutes = int((remaining_time_hours * 60) % 60)
-                    battery_time_remaining = f"{hours}h {minutes}m"
-                else:
-                    battery_time_remaining = "Charging"
-            else:
-                power_source = "AC"
-
-        except Exception as e:
-            # On the first pass, this might fail if the sensor is not
-            # yet ready.   We can ignore it.
-            pass
-
-    return jsonify(cpu_temp=f"{temp:.1f}" if isinstance(temp, float) else temp,
-                   cpu_load=load,
-                   voltage=voltage,
-                   current=current,
-                   low_voltage_warning=low_voltage_warning,
-                   power_source=power_source,
-                   battery_time_remaining=battery_time_remaining)
 
 @app.route('/set_test_mode', methods=['POST'])
 def set_test_mode():
