@@ -25,15 +25,15 @@
 
 - [x] Task: Update `templates/index.html` (d200174)
     - [ ] Remove the system stats display elements (CPU, Voltage, etc.) from the footer.
-- [~] Task: Update `static/main.js`
+- [x] Task: Update `static/main.js` (671ac05)
     - [ ] Remove the `updateSystemStats` function.
     - [ ] Remove the `setInterval` call that polls the `/system-stats` endpoint.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Frontend & UI Cleanup' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Frontend & UI Cleanup' (Protocol in workflow.md) (671ac05)
 
 ## Phase 4: Final Validation
 *Goal: Ensure the application is stable and free of dead code.*
 
-- [ ] Task: Verify application stability
+- [~] Task: Verify application stability
     - [ ] Run the app and ensure it starts without errors.
 - [ ] Task: Check for dead references
     - [ ] Search the codebase for any remaining 'ina219', 'i2c', or 'system-stats' strings.
