@@ -45,6 +45,7 @@ class PlateSolver:
                     'matched_stars_count': solution.get('Matches', 0),
                     'matched_catID': solution.get('matched_catID', []),
                     'matched_centroids': solution.get('matched_centroids', []),
+                    'matched_stars': solution.get('matched_stars', []),
                     'timestamp': solution.get('timestamp')
                 }
             else:

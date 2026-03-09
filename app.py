@@ -148,6 +148,9 @@ config.read('location.ini')
 observer.lat = config.get('location', 'lat', fallback='0')
 observer.lon = config.get('location', 'lon', fallback='0')
 
+# Load constellation boundaries
+load_constellation_boundaries()
+
 
 # libraries needed to solve for a "proper" WCS coordinate system
 
@@ -610,6 +613,50 @@ def solve_plate():
                     draw.text(pos, f"{id_str}", fill=(255,255,255), font=font)
                 except Exception as e:
                     print(f"Error drawing annotation for star {star_id}: {e}")
+
+            # Restore Constellation Boundaries logic
+            try:
+                matched_stars = np.array(result.get("matched_stars", []))
+                matched_centroids_arr = np.array(matched_centroids)
+
+                if len(matched_stars) > 0 and len(matched_centroids_arr) > 0:
+                    # x is returned as the second column by tetra3
+                    # y is the first column
+                    star_x = matched_centroids_arr[:,1]
+                    star_y = matched_centroids_arr[:,0]
+                    star_xy = (star_x, star_y)
+
+                    star_ra = np.array(matched_stars[:,0]) * u.deg
+                    star_dec = np.array(matched_stars[:,1]) * u.deg
+
+                    world_coords = SkyCoord(ra = star_ra, dec = star_dec, frame = 'icrs')
+
+                    # fit the WCS model
+                    wcs = fit_wcs_from_points(
+                        star_xy,
+                        world_coords, 
+                        projection='TAN',
+                        sip_degree=2)
+
+                    # Draw constellation boundaries
+                    constellation_name = solver_result.get("constellation").upper()
+                    if constellation_name and constellation_name in constellation_boundaries:
+                        points = constellation_boundaries[constellation_name]
+                        pixel_points = []
+                        for ra, dec in points:
+                            try:
+                                px, py = wcs.world_to_pixel(SkyCoord(ra, dec, unit="deg"))
+                                pixel_points.append((px, py))
+                            except Exception as e:
+                                pixel_points.append(None)
+                        
+                        for i in range(len(pixel_points) - 1):
+                            p1 = pixel_points[i]
+                            p2 = pixel_points[i+1]
+                            if p1 and p2:
+                                draw.line([p1, p2], fill="yellow", width=1)
+            except Exception as e:
+                print(f"EXCEPTION DURING WCS/CONSTELLATION HANDLING: {e}")
 
             # Save the annotated image into memory (JPEG)
             buf = io.BytesIO()
