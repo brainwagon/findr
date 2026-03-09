@@ -117,6 +117,12 @@
                         <label for="test_mode_checkbox">Test Mode</label>
                         <input type="checkbox" id="test_mode_checkbox" name="test_mode" {{ 'checked' if test_mode else '' }}>
                     </div>
+                    <div class="control">
+                        <label for="solver_select">Plate Solver</label>
+                        <select id="solver_select" name="solver">
+                            <!-- Options will be populated by main.js -->
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>        

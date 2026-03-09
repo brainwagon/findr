@@ -12,7 +12,6 @@ np.math = math
 import datetime
 import threading
 import time
-import tetra3
 from PIL import Image, ImageDraw, ImageFont
 import ephem
 import configparser
@@ -155,7 +154,6 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.wcs.utils import fit_wcs_from_points  
 
-tetra = tetra3.Tetra3()
 
 font_path = "/usr/share/fonts/truetype/noto/NotoSansDisplay-Regular.ttf"
 font_size = 12
@@ -761,6 +759,30 @@ def set_test_mode():
     data = request.json
     test_mode = data.get('test_mode', False)
     return "", 204
+
+@app.route('/get_solver')
+def get_solver_info():
+    """Get the current and available solvers."""
+    manager = get_solver()
+    return jsonify({
+        'current': manager.get_current_solver_type(),
+        'available': ['tetra3', 'cedar-solve']
+    })
+
+@app.route('/set_solver', methods=['POST'])
+def set_solver():
+    """Switch to a different solver."""
+    data = request.get_json()
+    solver_type = data.get('solver')
+    if not solver_type:
+        return jsonify({'error': 'No solver specified'}), 400
+    
+    manager = get_solver()
+    try:
+        manager.set_solver(solver_type)
+        return jsonify({'status': 'success', 'current': manager.get_current_solver_type()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Initialize camera and set initial controls once
 config = camera.create_still_configuration(
