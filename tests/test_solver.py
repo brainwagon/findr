@@ -1,10 +1,11 @@
 import unittest
 import os
-from solver import PlateSolver, Tetra3Solver, SolverManager
+from solver import PlateSolver, CedarSolver, get_solver
 
 class TestPlateSolver(unittest.TestCase):
     def setUp(self):
         self.solver = PlateSolver()
+        # Adjusted path if necessary, assuming it's run from project root
         self.sample_image_path = 'test-images/lores_jpeg_2025-11-07T03_03_46.674Z.jpg'
 
     def test_initialization(self):
@@ -39,11 +40,10 @@ class TestPlateSolver(unittest.TestCase):
 
     def test_get_solver_singleton(self):
         """Test that get_solver returns the same singleton instance."""
-        from solver import get_solver, SolverManager
         s1 = get_solver()
         s2 = get_solver()
         self.assertIs(s1, s2)
-        self.assertIsInstance(s1, SolverManager)
+        self.assertIsInstance(s1, CedarSolver)
         # It should still act as a solver (duck typing or interface)
         self.assertTrue(hasattr(s1, 'solve'))
 
