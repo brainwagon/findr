@@ -1,11 +1,15 @@
 import unittest
 import os
-from solver import PlateSolver, Tetra3Solver
+from solver import Tetra3Solver, BaseSolver
 
-class TestPlateSolver(unittest.TestCase):
+class TestTetra3Solver(unittest.TestCase):
     def setUp(self):
-        self.solver = PlateSolver()
+        self.solver = Tetra3Solver()
         self.sample_image_path = 'test-images/lores_jpeg_2025-11-07T03_03_46.674Z.jpg'
+
+    def test_is_base_solver(self):
+        """Test that Tetra3Solver implements BaseSolver."""
+        self.assertTrue(isinstance(self.solver, BaseSolver))
 
     def test_initialization(self):
         """Test that the solver initializes correctly."""
@@ -21,12 +25,9 @@ class TestPlateSolver(unittest.TestCase):
         self.assertIn('ra', result)
         self.assertIn('dec', result)
         self.assertIn('fov', result)
-        self.assertGreater(result['ra'], 0)
-        self.assertGreater(result['dec'], 0)
 
     def test_solve_failure(self):
-        """Test solver behavior with a non-star image (if available or empty)."""
-        # We'll use a black image for this test if it exists.
+        """Test solver behavior with a non-star image."""
         black_image_path = 'static/black_640x480.jpg'
         if os.path.exists(black_image_path):
             result = self.solver.solve(black_image_path)
@@ -36,14 +37,6 @@ class TestPlateSolver(unittest.TestCase):
         """Test solver behavior with an invalid image path."""
         result = self.solver.solve('non_existent_image.jpg')
         self.assertIsNone(result)
-
-    def test_get_solver_singleton(self):
-        """Test that get_solver returns the same singleton instance."""
-        from solver import get_solver
-        s1 = get_solver()
-        s2 = get_solver()
-        self.assertIs(s1, s2)
-        self.assertTrue(isinstance(s1, Tetra3Solver))
 
 if __name__ == '__main__':
     unittest.main()

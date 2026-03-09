@@ -17,7 +17,7 @@ class BaseSolver(ABC):
         """
         pass
 
-class PlateSolver:
+class Tetra3Solver(BaseSolver):
     def __init__(self, database_path='default_database'):
         """
         Initialize the Tetra3 plate solver.
@@ -33,9 +33,9 @@ class PlateSolver:
 
     def solve(self, image_path_or_obj):
         """
-        Solve the plate for a given image.
+        Solve the plate for a given image using tetra3.
         :param image_path_or_obj: Path to the image file or a PIL Image object.
-        :return: A dictionary containing the solve results (RA, Dec, Roll, FOV, etc.) or None if failed.
+        :return: A dictionary containing the solve results or None if failed.
         """
         try:
             if isinstance(image_path_or_obj, str):
@@ -43,7 +43,7 @@ class PlateSolver:
             else:
                 img = image_path_or_obj
 
-            logger.info(f"Attempting to solve image...")
+            logger.info(f"Attempting to solve image with Tetra3...")
             solution = self.t3.solve_from_image(img, return_matches=True)
 
             if solution['RA'] is not None:
@@ -66,11 +66,14 @@ class PlateSolver:
             logger.error(f"Error during plate solving: {e}")
             return None
 
+# For backward compatibility
+PlateSolver = Tetra3Solver
+
 # Simple singleton instance for global use
 _solver_instance = None
 
 def get_solver():
     global _solver_instance
     if _solver_instance is None:
-        _solver_instance = PlateSolver()
+        _solver_instance = Tetra3Solver()
     return _solver_instance
