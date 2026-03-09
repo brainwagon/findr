@@ -10,7 +10,7 @@
 - [x] Task: Create a new module or service for plate solving logic. (85f2cf8)
 - [x] Task: Write tests for the plate solving module using sample images. (9cc1ca0)
 - [x] Task: Implement the image capture and tetra3 solving logic. (b12db25)
-- [ ] Task: Integrate the plate solving module into the main Flask application.
+- [x] Task: Integrate the plate solving module into the main Flask application. (b12db25)
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Backend Integration' (Protocol in workflow.md)
 
 ## Phase 3: Frontend Integration
