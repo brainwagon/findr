@@ -3,7 +3,7 @@
 ## Phase 1: Dependency Cleanup
 *Goal: Remove all physical and git-tracked files related to the old solver.*
 
-- [ ] Task: Remove `tetra3-repo` submodule
+- [x] Task: Remove `tetra3-repo` submodule (9b8636e)
     - [ ] `git submodule deinit -f tetra3-repo`
     - [ ] `rm -rf .git/modules/tetra3-repo`
     - [ ] `git rm -f tetra3-repo`
