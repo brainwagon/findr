@@ -23,9 +23,9 @@
 ## Phase 3: Frontend & UI Cleanup
 *Goal: Clean up the user interface and JavaScript logic.*
 
-- [~] Task: Update `templates/index.html`
+- [x] Task: Update `templates/index.html` (d200174)
     - [ ] Remove the system stats display elements (CPU, Voltage, etc.) from the footer.
-- [ ] Task: Update `static/main.js`
+- [~] Task: Update `static/main.js`
     - [ ] Remove the `updateSystemStats` function.
     - [ ] Remove the `setInterval` call that polls the `/system-stats` endpoint.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Frontend & UI Cleanup' (Protocol in workflow.md)
