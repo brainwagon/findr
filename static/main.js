@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     let currentVideoMode = 'live'; // Default to live mode
     let isSolving = false; // Flag to prevent multiple simultaneous solves
+    let solveStatusPollInterval; 
 
     function updateVideoModeOverlay() {
         if (videoModeOverlay) {
@@ -23,33 +24,25 @@ document.addEventListener('DOMContentLoaded', (event) => {
     videoModeSelect.addEventListener('change', () => {
         currentVideoMode = videoModeSelect.value;
         updateVideoModeOverlay();
-        updateVideoFeed(); // Update the feed immediately
         if (currentVideoMode === 'live') {
+            videoFeedImg.src = '/video_feed?t=' + new Date().getTime();
             videoModeOverlay.classList.remove('solve-success', 'solve-fail');
             radecContainer.style.display = 'none';
             matchedStarsOverlay.innerText = '';
             matchedStarsOverlay.style.display = 'none'; // Hide the overlay
         } else if (currentVideoMode === 'solved') {
             radecContainer.style.display = 'block';
+            // Show current solved image (or black fallback) immediately while starting new solve
+            const url = '/solved_field.jpg?t=' + new Date().getTime();
+            videoFeedImg.src = url;
             if (!isSolving) {
                 solveField();
             }
         }
     });
 
-    function updateVideoFeed() {
-        if (videoFeedImg) {
-            if (currentVideoMode === 'live') {
-                videoFeedImg.src = '/video_feed?t=' + new Date().getTime();
-            } else {
-                videoFeedImg.src = '/solved_field.jpg?t=' + new Date().getTime();
-            }
-        }
-    }
-
-    // Update video feed and FPS every 100ms (adjust as needed)
+    // Update video feed and FPS every 1000ms (more reasonable for a Pi)
     setInterval(() => {
-        updateVideoFeed();
         fetch('/get_pause_state') // New endpoint to get pause state
             .then(response => response.json())
             .then(data => {
@@ -66,7 +59,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 }
             })
             .catch(error => console.error('Error fetching pause state:', error));
-    }, 100);
+    }, 1000);
 
     const gainSelect = document.getElementById('gain_select');
     const exposureSelect = document.getElementById('exposure_select');
@@ -250,56 +243,55 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
     });
 
-    let solveStatusPollInterval;
-
     function pollSolveStatus() {
         fetch('/solve_status')
             .then(response => response.json())
             .then(data => {
-                if (data.status === 'solved') {
-                    raDisplay.innerText = data.ra_hms;
-                    decDisplay.innerText = data.dec_dms;
-                    altDisplay.innerText = data.alt;
-                    azDisplay.innerText = data.az;
-                    videoModeOverlay.innerText = 'SOLVE';
-                    videoModeOverlay.classList.remove('solve-fail');
-                    videoModeOverlay.classList.add('solve-success');
-                    matchedStarsOverlay.innerText = data.matched_stars_count + ' stars';
-                    matchedStarsOverlay.style.display = 'block'; // Show the overlay
+                if (data.status === 'solved' || data.status === 'failed') {
+                    if (data.status === 'solved') {
+                        raDisplay.innerText = data.ra_hms;
+                        decDisplay.innerText = data.dec_dms;
+                        altDisplay.innerText = data.alt;
+                        azDisplay.innerText = data.az;
+                        videoModeOverlay.innerText = 'SOLVE';
+                        videoModeOverlay.classList.remove('solve-fail');
+                        videoModeOverlay.classList.add('solve-success');
+                        matchedStarsOverlay.innerText = data.matched_stars_count + ' stars';
+                        matchedStarsOverlay.style.display = 'block'; // Show the overlay
+                    } else {
+                        raDisplay.innerText = '--:--:--.-';
+                        decDisplay.innerText = '--:--:--.-';
+                        altDisplay.innerText = '--.-';
+                        azDisplay.innerText = '--.-';
+                        videoModeOverlay.innerText = 'FAIL';
+                        videoModeOverlay.classList.remove('solve-success');
+                        videoModeOverlay.classList.add('solve-fail');
+                        matchedStarsOverlay.innerText = '';
+                        matchedStarsOverlay.style.display = 'none'; // Hide the overlay
+                    }
+                    
+                    // Refresh solved image once per result
+                    if (currentVideoMode === 'solved') {
+                        const url = '/solved_field.jpg?t=' + new Date().getTime();
+                        videoFeedImg.src = url;
+                    }
+
                     clearInterval(solveStatusPollInterval);
                     isSolving = false; // Reset flag
                     if (currentVideoMode === 'solved') {
-                        setTimeout(solveField, 500);
+                        setTimeout(solveField, 1000); // Wait 1s between solves to be gentle
                     }
-                } else if (data.status === 'failed') {
-                    raDisplay.innerText = '--:--:--.-';
-                    decDisplay.innerText = '--:--:--.-';
-                    altDisplay.innerText = '--.-';
-                    azDisplay.innerText = '--.-';
-                    videoModeOverlay.innerText = 'FAIL';
-                    videoModeOverlay.classList.remove('solve-success');
-                    videoModeOverlay.classList.add('solve-fail');
-                    matchedStarsOverlay.innerText = '';
-                    matchedStarsOverlay.style.display = 'none'; // Hide the overlay
-                    clearInterval(solveStatusPollInterval);
-                    isSolving = false; // Reset flag
-                    if (currentVideoMode === 'solved') {
-                        setTimeout(solveField, 500);
-                    }
-                } else if (data.status === 'paused') {
-                    clearInterval(solveStatusPollInterval);
-                    isSolving = false; // Reset flag
-                } else {
                 }
             })
             .catch(error => {
                 console.error('Error fetching solver status:', error);
                 clearInterval(solveStatusPollInterval);
+                isSolving = false;
             });
     }
 
     function solveField() {
-        if (isSolving) return; // Prevent multiple solves
+        if (isSolving || currentVideoMode !== 'solved') return; 
 
         isSolving = true; // Set flag
 
@@ -309,15 +301,15 @@ document.addEventListener('DOMContentLoaded', (event) => {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'solving') {
-                // Start polling for status
-                solveStatusPollInterval = setInterval(pollSolveStatus, 200);
+                // Start polling for status every 500ms
+                solveStatusPollInterval = setInterval(pollSolveStatus, 500);
             } else {
-                isSolving = false; // Reset flag on failure to start
+                isSolving = false; 
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            isSolving = false; // Reset flag on error
+            isSolving = false; 
         });
     }
 

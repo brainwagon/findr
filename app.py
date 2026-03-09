@@ -805,5 +805,6 @@ frame_capture_thread.start()
 solve_fps_thread = threading.Thread(target=calculate_solve_fps)
 solve_fps_thread.daemon = True
 solve_fps_thread.start()
+
 logging.getLogger("werkzeug").setLevel(logging.WARNING)
 app.run(host='0.0.0.0', port=8080, threaded=True)
