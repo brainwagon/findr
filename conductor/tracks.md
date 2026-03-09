@@ -15,5 +15,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Remove tetra3 and Scaffolding**
+- [x] **Track: Remove tetra3 and Scaffolding**
 *Link: [./tracks/remove_tetra3_20260309/](./tracks/remove_tetra3_20260309/)*
