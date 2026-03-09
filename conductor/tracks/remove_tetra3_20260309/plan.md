@@ -11,7 +11,7 @@
     - [ ] Delete `patches/tetra3_numpy2.patch`
     - [ ] Delete `docs/tetra3_patch.md`
     - [ ] Delete `docs/research_tetra3.md` (if relevant)
-- [ ] Task: Delete legacy tests
+- [x] Task: Delete legacy tests (4b8d6ef)
     - [ ] Delete `tests/test_tetra3_solver.py`
     - [ ] Delete `tests/test_solver_manager.py`
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Dependency Cleanup' (Protocol in workflow.md)
