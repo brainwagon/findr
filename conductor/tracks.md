@@ -12,8 +12,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [~] **Track: Modularize plate solving to support tetra3 and cedar-solve**
 *Link: [./tracks/modularize_plate_solving_20260308/](./tracks/modularize_plate_solving_20260308/)*
-
----
-
-- [x] **Track: Remove tetra3 and Scaffolding**
-*Link: [./tracks/remove_tetra3_20260309/](./tracks/remove_tetra3_20260309/)*
