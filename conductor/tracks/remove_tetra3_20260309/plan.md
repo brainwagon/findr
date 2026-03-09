@@ -16,7 +16,7 @@
     - [ ] Delete `tests/test_solver_manager.py`
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Dependency Cleanup' (Protocol in workflow.md) (3800987)
 
-## Phase 2: Backend Refactoring
+## Phase 2: Backend Refactoring [checkpoint: 011fc8d]
 *Goal: Simplify solver.py to use CedarSolver directly.*
 
 - [x] Task: Refactor `solver.py` architecture (acda3aa)
@@ -26,7 +26,7 @@
     - [ ] Update `get_solver()` and `PlateSolver` alias to use `CedarSolver` logic without the manager.
 - [x] Task: Update `requirements.txt` (acda3aa)
     - [ ] Ensure `tetra3` (if listed as a standalone) is removed.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Backend Refactoring' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Backend Refactoring' (Protocol in workflow.md) (011fc8d)
 
 ## Phase 3: Frontend & API Cleanup
 *Goal: Remove UI elements and endpoints related to switching solvers.*
