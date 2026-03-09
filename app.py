@@ -19,6 +19,7 @@ import configparser
 import csv
 import requests
 import i2c
+from solver import get_solver
 try:
     from smbus2 import SMBus
 except ImportError:
@@ -530,6 +531,7 @@ def solve_plate():
     if is_paused:
         solver_status = "paused"
         return
+    
     img = None
     try:
         if test_mode:
@@ -550,50 +552,20 @@ def solve_plate():
             buffer.seek(0)
             img = Image.open(buffer)
 
-        solution = tetra.solve_from_image(img,
-                return_visual=True, return_matches=True,
-                distortion=-0.003857906866170312)
+        # Use our new PlateSolver
+        solver = get_solver()
+        result = solver.solve(img)
 
-        if solution and 'RA' in solution and 'Dec' in solution and 'Roll' in solution:
-            # Get the visual solution
-            visual_solution = solution['visual']
+        if result:
+            ra_val = result['ra']
+            dec_val = result['dec']
+            roll_val = result['roll']
+            fov_val = result['fov']
 
-            # Convert both images to numpy arrays
-            img_array = np.array(img.convert('RGB'))
-            visual_array = np.array(visual_solution.convert('RGB'))
+            ra_hms = ephem.hours(radians(ra_val))
+            dec_dms = ephem.degrees(radians(dec_val))
 
-            # Resize visual solution to match input image dimensions
-            if img_array.shape != visual_array.shape:
-                visual_solution_resized = visual_solution.resize(img.size)
-                visual_array = np.array(visual_solution_resized.convert('RGB'))
-                visual_solution = visual_solution_resized
-
-            # Combine the images by taking the maximum pixel value
-            combined_array = np.maximum(img_array, visual_array)
-
-            # Create a new image from the combined array
-            combined_image = Image.fromarray(combined_array)
-
-            # okay, MTV - draw annotations
-            draw = ImageDraw.Draw(combined_image)
-            for id, p in zip(solution.get("matched_catID", []), solution.get("matched_centroids", [])):
-                try:
-                    # not sure why x and y are swapped here...
-                    p = (int(p[1]) + 8, int(p[0]) - 8)
-                    id_str = decode_simbad_greek(ids.get(id, str(id)))
-                    id_fields = id_str.split()
-                    if id_fields and id_fields[0] == "*":
-                        id_str = ' '.join(id_fields[1:])
-                    draw.text(p, f"{id_str}", fill=(255,255,255), font=font)
-                except Exception:
-                    pass
-
-            # Build solver_result
-            solution_time_val = solution.get("T_solve", 0.0)
-            ra_hms = ephem.hours(radians(solution['RA']))
-            dec_dms = ephem.degrees(radians(solution['Dec']))
-
-            # now we can compute the alt/az for the solved center.
+            # compute the alt/az for the solved center.
             observer.date = ephem.now()
             target = ephem.FixedBody()
             target._ra = ra_hms
@@ -601,90 +573,26 @@ def solve_plate():
             target.compute(observer)
             
             solver_result = {
-                "ra": f"{solution['RA']:.4f}",
-                "dec": f"{solution['Dec']:.4f}",
-                "roll": f"{solution['Roll']:.4f}",
+                "ra": f"{ra_val:.4f}",
+                "dec": f"{dec_val:.4f}",
+                "roll": f"{roll_val:.4f}",
                 "ra_hms": format_radec_fixed_width(ra_hms, is_ra=True, total_width=10, decimal_places=1),
                 "dec_dms": format_radec_fixed_width(dec_dms, is_ra=False, total_width=11, decimal_places=1),
                 "alt": f"{math.degrees(target.alt):.1f}",
                 "az": f"{math.degrees(target.az):.1f}",
                 "solved_image_url": "/solved_field.jpg",
-                "solution_time": f"{solution_time_val:.2f}ms",
-                "constellation": ephem.constellation((radians(solution['RA']), radians(solution['Dec'])))[0],
-                "matched_stars_count": len(solution.get("matched_catID", [])),
+                "constellation": ephem.constellation((radians(ra_val), radians(dec_val)))[0],
             }
 
-            solver_status = "solved"
-
-            # MTV here is some magic... 
-            # We asked for the solver to return the list of matched stars.
-            # The data will include both the RA/DEC (in degrees) for each 
-            # of the stars, as well as the RA/DEC.   Using the two, we 
-            # can ask astropy to compute an appropriate conversion object,
-            # including the possibility of adding the distortion parameter.
-
-            try:
-
-                matched_stars = np.array(solution["matched_stars"])
-                matched_centroids = np.array(solution["matched_centroids"])
-
-                # x is returned as the second column by tetra3
-                # y is the first column
-
-                star_x = matched_centroids[:,1]
-                star_y = matched_centroids[:,0]
-                star_xy = (star_x, star_y)
-
-                star_ra = np.array(matched_stars[:,0]) * u.deg
-                star_dec = np.array(matched_stars[:,1]) * u.deg
-
-                world_coords = SkyCoord(ra = star_ra, dec = star_dec, frame = 'icrs')
-
-                # now, fit the model.. 
-                wcs = fit_wcs_from_points(
-                    star_xy,
-                    world_coords, 
-                    projection='TAN',
-                    sip_degree=2)
-
-                # Draw constellation boundaries
-                constellation_name = solver_result.get("constellation").upper()
-                if constellation_name and constellation_name in constellation_boundaries:
-                    points = constellation_boundaries[constellation_name]
-                    # we need to transform the points to pixel coordinates
-                    pixel_points = []
-                    for ra, dec in points:
-                        try:
-                            px, py = wcs.world_to_pixel(SkyCoord(ra, dec, unit="deg"))
-                            pixel_points.append((px, py))
-                        except Exception as e:
-                            print(f"Error converting point to pixel: {e}")
-                            pixel_points.append(None)
-                    
-                    # Draw lines between consecutive points
-                    for i in range(len(pixel_points) - 1):
-                        p1 = pixel_points[i]
-                        p2 = pixel_points[i+1]
-                        # relies on clipping from the ImageDraw library...
-                        draw.line([p1, p2], fill="yellow", width=1)
-
-            except Exception as e:
-                print(f"EXCEPTION DURING WCS HANDLING: {e}")
-
-            # now that we have modified the image, we must re-save it
-            # before we return.
-            #
-            # Save the combined image into memory (JPEG)
+            # For now, we'll still use the original image as the "solved" image 
+            # until we re-integrate the annotation logic if needed.
             buf = io.BytesIO()
-            combined_image.save(buf, format='JPEG')
+            img.save(buf, format='JPEG')
             buf.seek(0)
             with solved_image_lock:
                 solved_image_bytes = buf.getvalue()
 
-            # send the center to stellarium...
-            if False:
-                point_stellarium(radians(solution['RA']), radians(solution['Dec']))
-
+            solver_status = "solved"
         else:
             # Save the original input image into memory so the UI can still display something
             buf = io.BytesIO()
@@ -697,6 +605,7 @@ def solve_plate():
             solver_result = {"solved_image_url": "/solved_field.jpg"}
 
     except Exception as e:
+        print(f"Error in solve_plate: {e}")
         if img:
             try:
                 buf = io.BytesIO()
