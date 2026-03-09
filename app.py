@@ -458,10 +458,6 @@ def calculate_solve_fps():
         solve_fps = solve_completed_count / 5.0
         solve_completed_count = 0
 
-
-
-
-
 def capture_and_process_frames():
     """Continuously captures frames, calculates FPS, and stores the latest frame."""
     global latest_frame_bytes, current_fps, last_frame_time, frame_count, is_paused
@@ -494,46 +490,10 @@ def capture_and_process_frames():
             # or handle the error in a way that doesn't crash the thread.
             time.sleep(1) # Wait a bit before retrying to avoid spamming errors
 
-
-
 # In-memory storage for the solved image bytes to avoid writing to disk.
 # Access guarded by solved_image_lock.
 solved_image_bytes = None
 solved_image_lock = threading.Lock()
-
-def format_radec_fixed_width(angle_obj, is_ra=True, total_width=10, decimal_places=1):
-    """
-    Formats an ephem.Angle object to a fixed-width string.
-    RA: HH:MM:SS.S (total_width=10)
-    Dec: sDD:MM:SS.S (total_width=11, s is sign)
-    """
-    s = str(angle_obj)
-    parts = s.split(':')
-
-    if is_ra:
-        # RA: HH:MM:SS.S
-        hours = parts[0].zfill(2)
-        minutes = parts[1].zfill(2)
-        seconds_float = float(parts[2])
-        formatted_seconds = f"{seconds_float:0{3+decimal_places}.{decimal_places}f}"
-        formatted_time = f"{hours}:{minutes}:{formatted_seconds}"
-    else:
-        # Dec: sDD:MM:SS.S
-        sign = ''
-        if parts[0].startswith('-'):
-            sign = '-'
-            parts[0] = parts[0][1:]
-        elif parts[0].startswith('+'):
-            sign = '+'
-            parts[0] = parts[0][1:]
-        
-        degrees = parts[0].zfill(2)
-        minutes = parts[1].zfill(2)
-        seconds_float = float(parts[2])
-        formatted_seconds = f"{seconds_float:0{3+decimal_places}.{decimal_places}f}"
-        formatted_time = f"{sign}{degrees}:{minutes}:{formatted_seconds}"
-    
-    return formatted_time.ljust(total_width)[:total_width]
 
 def solve_plate():
     """Capture an image and solve for RA/Dec/Roll."""

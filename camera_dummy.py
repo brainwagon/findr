@@ -26,8 +26,9 @@ class Picamera2:
             "PixelArraySize": (640, 480)
         }
 
+    @property
+    def camera_controls(self):
         return {
-            "AeEnable": (False, True, True),
             "AnalogueGain": (1.0, 251.1886444091797, 1.0),
             "ExposureTime": (29, 15534385, 20000),
             "Brightness": (-1.0, 1.0, 0.0),
@@ -36,6 +37,9 @@ class Picamera2:
             "ExposureValue": (-8.0, 8.0, 0.0),
             "AeExposureMode": (0, 3, 0)
         }
+
+    def create_still_configuration(self, **kwargs):
+        return {}
 
     def __enter__(self):
         return self
@@ -58,7 +62,7 @@ class Picamera2:
         self._controls.update(safe_controls)
         print("Dummy camera controls set:", self._controls)
 
-    def capture_file(self, buffer, format='jpeg'):
+    def capture_file(self, buffer, name=None, format='jpeg'):
         """Generates a dummy image with a timestamp and writes it to the buffer."""
         img = Image.new('RGB', (640, 480), color = 'darkgrey')
         d = ImageDraw.Draw(img)

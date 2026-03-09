@@ -5,3 +5,7 @@ pillow
 smbus2
 scipy
 tetra3 @ git+https://github.com/esa/tetra3.git
+pyephem
+requests
+astropy
+picamera2
