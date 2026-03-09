@@ -1,0 +1,8 @@
+{
+  "track_id": "remove_tetra3_20260309",
+  "type": "chore",
+  "status": "new",
+  "created_at": "2026-03-09T12:00:00Z",
+  "updated_at": "2026-03-09T12:00:00Z",
+  "description": "cedar-solve appears to be much better than the original tetra3 library, so let's go ahead and strip out tetra3 and the scaffolding that allowed the app to use either solver. Go ahead and remove the tetra3 as a dependency, only use cedar-solve, and remove the UI that allows you to switch."
+}
