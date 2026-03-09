@@ -593,8 +593,25 @@ def solve_plate():
                 "matched_stars_count": result.get('matched_stars_count', 0),
             }
 
-            # For now, we'll still use the original image as the "solved" image 
-            # until we re-integrate the annotation logic if needed.
+            # Draw annotations
+            draw = ImageDraw.Draw(img)
+            matched_catID = result.get('matched_catID', [])
+            matched_centroids = result.get('matched_centroids', [])
+            
+            for star_id, p in zip(matched_catID, matched_centroids):
+                try:
+                    # Coordinate adjustment based on previous implementation
+                    # p is usually (y, x) from tetra3
+                    pos = (int(p[1]) + 8, int(p[0]) - 8)
+                    id_str = decode_simbad_greek(ids.get(star_id, str(star_id)))
+                    id_fields = id_str.split()
+                    if id_fields and id_fields[0] == "*":
+                        id_str = ' '.join(id_fields[1:])
+                    draw.text(pos, f"{id_str}", fill=(255,255,255), font=font)
+                except Exception as e:
+                    print(f"Error drawing annotation for star {star_id}: {e}")
+
+            # Save the annotated image into memory (JPEG)
             buf = io.BytesIO()
             img.save(buf, format='JPEG')
             buf.seek(0)

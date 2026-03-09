@@ -43,6 +43,8 @@ class PlateSolver:
                     'roll': solution['Roll'],
                     'fov': solution['FOV'],
                     'matched_stars_count': solution.get('Matches', 0),
+                    'matched_catID': solution.get('matched_catID', []),
+                    'matched_centroids': solution.get('matched_centroids', []),
                     'timestamp': solution.get('timestamp')
                 }
             else:
