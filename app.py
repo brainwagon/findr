@@ -324,8 +324,6 @@ def index():
     brightness = 50
     contrast = 50
     sharpness = 50
-    test_mode = False
-
 
     return render_template('index.html', 
             model=model, 
