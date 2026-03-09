@@ -1,6 +1,6 @@
 # Implementation Plan: Remove tetra3 and Scaffolding
 
-## Phase 1: Dependency Cleanup
+## Phase 1: Dependency Cleanup [checkpoint: 3800987]
 *Goal: Remove all physical and git-tracked files related to the old solver.*
 
 - [x] Task: Remove `tetra3-repo` submodule (9b8636e)
@@ -14,7 +14,7 @@
 - [x] Task: Delete legacy tests (4b8d6ef)
     - [ ] Delete `tests/test_tetra3_solver.py`
     - [ ] Delete `tests/test_solver_manager.py`
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Dependency Cleanup' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Dependency Cleanup' (Protocol in workflow.md) (3800987)
 
 ## Phase 2: Backend Refactoring
 *Goal: Simplify solver.py to use CedarSolver directly.*
