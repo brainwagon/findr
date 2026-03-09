@@ -19,19 +19,19 @@
 ## Phase 2: Backend Refactoring
 *Goal: Simplify solver.py to use CedarSolver directly.*
 
-- [ ] Task: Refactor `solver.py` architecture
+- [x] Task: Refactor `solver.py` architecture (acda3aa)
     - [ ] Remove `Tetra3Solver` class.
     - [ ] Remove `SolverManager` class.
     - [ ] Promote `CedarSolver` or integrate its logic directly as the primary solver.
     - [ ] Update `get_solver()` and `PlateSolver` alias to use `CedarSolver` logic without the manager.
-- [ ] Task: Update `requirements.txt`
+- [x] Task: Update `requirements.txt` (acda3aa)
     - [ ] Ensure `tetra3` (if listed as a standalone) is removed.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Backend Refactoring' (Protocol in workflow.md)
 
 ## Phase 3: Frontend & API Cleanup
 *Goal: Remove UI elements and endpoints related to switching solvers.*
 
-- [ ] Task: Clean up UI templates
+- [~] Task: Clean up UI templates
     - [ ] Remove the solver dropdown from `templates/index.html`.
 - [ ] Task: Clean up static assets
     - [ ] Remove JavaScript in `static/main.js` that handles solver selection.
