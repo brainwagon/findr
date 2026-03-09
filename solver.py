@@ -7,12 +7,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class PlateSolver:
-    def __init__(self, database_path=None):
+    def __init__(self, database_path='default_database'):
         """
         Initialize the Tetra3 plate solver.
         :param database_path: Path to a custom tetra3 database. If None, the default is used.
         """
-        logger.info("Initializing Tetra3 solver...")
+        logger.info(f"Initializing Tetra3 solver with database: {database_path}...")
         try:
             self.t3 = tetra3.Tetra3(load_database=database_path)
             logger.info("Tetra3 solver initialized successfully.")
