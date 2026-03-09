@@ -280,8 +280,12 @@ try:
     # Trigger an internal check to see if libcamera is actually available
     _ = camera.camera_properties
     print("Picamera2 initialized successfully.")
-except (ImportError, ModuleNotFoundError, Exception) as e:
-    print(f"Picamera2 initialization failed: {e}. Falling back to dummy camera.")
+except (ImportError, ModuleNotFoundError) as e:
+    print(f"Picamera2 or libcamera not found ({e}). Falling back to dummy camera.")
+    from camera_dummy import Picamera2
+    camera = Picamera2()
+except Exception as e:
+    print(f"Unexpected error initializing Picamera2: {e}. Falling back to dummy camera.")
     from camera_dummy import Picamera2
     camera = Picamera2()
 
