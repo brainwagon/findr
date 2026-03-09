@@ -1,134 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raspberry Pi Camera Control</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/skeleton-css@2.0.4/css/skeleton.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raspberry Pi Camera Control</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/skeleton-css@2.0.4/css/skeleton.min.css">
 </head>
 <body>
-    <h2>findr &mdash; a computerized plate solving finder</h2>
-    <div class="container">
-        <div class="top-container">
-            <div class="image-section">
-                <div class="video-container">
-                    <img id="video_feed_img" src="{{ url_for('video_feed') }}" width="640">
-                    <span id="video_mode_overlay" class="live-overlay">LIVE</span>
-                    <span id="fps_display" class="fps-overlay">FPS: 0</span>
-                    <span id="matched_stars_overlay" class="matched-stars-overlay"></span>
-                </div>
-                <div id="radec-container" class="radec-container">
-                    <table>
-                        <tr>
-                            <td class="label">RA:</td>
-                            <td id="ra-display">--:--:--.-</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Dec:</td>
-                            <td id="dec-display">--:--:--.-</td>
-                        </tr>
-                    </table>
-                    <div id="altaz-container" class="altaz-container">
-                        <span class="label">Alt:</span> <span id="alt-display">--.-</span>&nbsp;&nbsp;
-                        <span class="label">Az:</span> <span id="az-display">--.-</span>
-                    </div>
-                </div>
-                
-            </div>
-            <div class="controls-section">
-                <div class="controls-container">
-                    <h3>Controls</h3>
-                    
-                    <div class="control">
-                        <label for="video_mode_select">Video Mode</label>
-                        <select id="video_mode_select" name="video_mode">
-                            <option value="live">Live</option>
-                            <option value="solved">Solved</option>
-                        </select>
-                    </div>
-                    <div class="control">
-                        <button id="pause_button">Pause</button>
-                    </div>
-                    <div class="control">
-                        <button id="capture_lores_jpeg_button">Capture LoRes JPEG</button>
-                    </div>
-                    <div class="control">
-                        <button id="capture_full_jpeg_button">Capture Full JPEG</button>
-                    </div>
-                    <div class="control">
-                        <button id="dark_mode_toggle">Toggle Dark Mode</button>
-                    </div>
-                    <div class="control">
-                        <label for="gain_select">Gain</label>
-                        <select id="gain_select" name="gain">
-                            {% for i in range(1, 21) %}
-                                <option value="{{ i }}" {{ 'selected' if i == gain else '' }}>{{ i }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="control">
-                        <label for="exposure">Exposure</label>
-                        <select id="exposure_select" name="exposure">
-                            {% for time in exposure_times %}
-                                <option value="{{ loop.index0 }}" {{ 'selected' if loop.index0 == exposure_index else '' }}>
-                                    {% if time == 1000000 %}
-                                        1s
-                                    {% else %}
-                                        1/{{ "%.0f"|format(1000000 / time) }}s
-                                    {% endif %}
-                                </option>
-                            {% endfor %}
-                        </select>
-
-                    </div>
-                    <div class="control">
-                        <label for="brightness">Brightness</label>
-                        <input type="range" id="brightness" name="brightness" min="0" max="100" value="{{ brightness }}">
-                        <span id="brightness_value">{{ brightness }}</span>
-                    </div>
-                    <div class="control">
-                        <label for="contrast">Contrast</label>
-                        <input type="range" id="contrast" name="contrast" min="0" max="100" value="{{ contrast }}">
-                        <span id="contrast_value">{{ contrast }}</span>
-                    </div>
-                    <div class="control">
-                        <label for="sharpness">Sharpness</label>
-                        <input type="range" id="sharpness" name="sharpness" min="0" max="100" value="{{ sharpness }}">
-                        <span id="sharpness_value">{{ sharpness }}</span>
-                    </div>
-                    <div class="control">
-                        <label for="zoom_select">Zoom</label>
-                        <select id="zoom_select" name="zoom_select">
-                            <option value="none">None</option>
-                            <option value="640x480">640x480</option>
-                            <option value="320x240">320x240</option>
-                        </select>
-                    </div>
-                    <div class="control">
-                        <button id="save_settings_button">Save Settings</button>
-                    </div>
-                </div>
-                <div class="controls-container">
-                    <h3>Expert Mode</h3>
-                    <div class="control">
-                        <label for="test_mode_checkbox">Test Mode</label>
-                        <input type="checkbox" id="test_mode_checkbox" name="test_mode" {{ 'checked' if test_mode else '' }}>
-                    </div>
-
-                </div>
-            </div>
-        </div>        
-        <div class="footer-info">
-            <div>
-            <span>Model: {{ model }}</span>
-            <span id="pixel_array_size_display">Pixel Array Size: {{ pixel_array_size }}</span>
-            </div>
+  <h2>findr &mdash; a computerized plate solving finder</h2>
+  <div class="container">
+    <div class="top-container">
+      <div class="image-section">
+        <div class="video-container">
+          <img id="video_feed_img" src="{{ url_for('video_feed') }}" width="640">
+          <span id="video_mode_overlay" class="live-overlay">LIVE</span>
+          <span id="fps_display" class="fps-overlay">FPS: 0</span>
+          <span id="matched_stars_overlay" class="matched-stars-overlay"></span>
         </div>
-        <p>Copyright 2025, Mark VandeWettering &lt;mvandewettering@gmail.com&gt;</p>
-    </footer>
-    <script src="/static/main.js"></script>
+        <div id="radec-container" class="radec-container">
+          <table>
+            <tr>
+              <td class="label">RA:</td>
+              <td id="ra-display">--:--:--.-</td>
+            </tr>
+            <tr>
+              <td class="label">Dec:</td>
+              <td id="dec-display">--:--:--.-</td>
+            </tr>
+          </table>
+          <div id="altaz-container" class="altaz-container">
+            <span class="label">Alt:</span> <span id="alt-display">--.-</span>&nbsp;&nbsp;
+            <span class="label">Az:</span> <span id="az-display">--.-</span>
+          </div>
+        </div>
+      </div>
+      <div class="controls-section">
+        <div class="controls-container">
+          <h3>Controls</h3>
+          <div class="control">
+            <label for="video_mode_select">Video Mode</label>
+            <select id="video_mode_select" name="video_mode">
+              <option value="live">Live</option>
+              <option value="solved">Solved</option>
+            </select>
+          </div>
+          <div class="control">
+            <button id="pause_button">Pause</button>
+          </div>
+          <div class="control">
+            <button id="capture_lores_jpeg_button">Capture LoRes JPEG</button>
+          </div>
+          <div class="control">
+            <button id="capture_full_jpeg_button">Capture Full JPEG</button>
+          </div>
+          <div class="control">
+            <button id="dark_mode_toggle">Toggle Dark Mode</button>
+          </div>
+          <div class="control">
+            <label for="gain_select">Gain</label>
+            <select id="gain_select" name="gain">
+              {% for i in range(1, 21) %}
+                <option value="{{ i }}" {{ 'selected' if i == gain else '' }}>{{ i }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="control">
+            <label for="exposure">Exposure</label>
+            <select id="exposure_select" name="exposure">
+              {% for time in exposure_times %}
+                <option value="{{ loop.index0 }}" {{ 'selected' if loop.index0 == exposure_index else '' }}>
+                  {% if time == 1000000 %}
+                    1s
+                  {% else %}
+                    1/{{ "%.0f"|format(1000000 / time) }}s
+                  {% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="control">
+            <label for="brightness">Brightness</label>
+            <input type="range" id="brightness" name="brightness" min="0" max="100" value="{{ brightness }}">
+            <span id="brightness_value">{{ brightness }}</span>
+          </div>
+          <div class="control">
+            <label for="contrast">Contrast</label>
+            <input type="range" id="contrast" name="contrast" min="0" max="100" value="{{ contrast }}">
+            <span id="contrast_value">{{ contrast }}</span>
+          </div>
+          <div class="control">
+            <label for="sharpness">Sharpness</label>
+            <input type="range" id="sharpness" name="sharpness" min="0" max="100" value="{{ sharpness }}">
+            <span id="sharpness_value">{{ sharpness }}</span>
+          </div>
+          <div class="control">
+            <label for="zoom_select">Zoom</label>
+            <select id="zoom_select" name="zoom_select">
+              <option value="none">None</option>
+              <option value="640x480">640x480</option>
+              <option value="320x240">320x240</option>
+            </select>
+          </div>
+          <div class="control">
+            <button id="save_settings_button">Save Settings</button>
+          </div>
+        </div>
+        <div class="controls-container">
+          <h3>Expert Mode</h3>
+          <div class="control">
+            <label for="test_mode_checkbox">Test Mode</label>
+            <input type="checkbox" id="test_mode_checkbox" name="test_mode" {{ 'checked' if test_mode else '' }}>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-info">
+      <div>
+        <span>Model: {{ model }}</span>
+        <span id="pixel_array_size_display">Pixel Array Size: {{ pixel_array_size }}</span>
+      </div>
+    </div>
+    <p>Copyright 2025, Mark VandeWettering &lt;mvandewettering@gmail.com&gt;</p>
+  </div>
+  <script src="/static/main.js"></script>
 </body>
 </html>

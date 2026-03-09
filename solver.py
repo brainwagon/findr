@@ -1,7 +1,14 @@
-import sys
-import os
+"""Core plate-solving abstraction and manager for findr.
+
+Defines the BaseSolver interface and the CedarSolver implementation
+using the cedar-solve library.
+"""
+
 import logging
+import os
+import sys
 from abc import ABC, abstractmethod
+
 from PIL import Image
 
 # Add local library paths to sys.path
@@ -16,19 +23,32 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class BaseSolver(ABC):
+    """Abstract base class for plate solvers."""
+
     @abstractmethod
     def solve(self, image_path_or_obj):
-        """
-        Solve the plate for a given image.
-        :param image_path_or_obj: Path to the image file or a PIL Image object.
-        :return: A dictionary containing the solve results or None if failed.
+        """Solves the plate for a given image.
+
+        Args:
+            image_path_or_obj: Path to the image file or a PIL Image object.
+
+        Returns:
+            A dictionary containing the solve results (ra, dec, roll, fov, etc.)
+            or None if the solve failed.
         """
         pass
 
 class CedarSolver(BaseSolver):
+    """Plate solver implementation using the cedar-solve library."""
+
     def __init__(self, database_path='default_database'):
-        """
-        Initialize the Cedar-Solve plate solver.
+        """Initializes the Cedar-Solve plate solver.
+
+        Args:
+            database_path: Name or path of the star database to load.
+
+        Raises:
+            Exception: If the database fails to load.
         """
         logger.info(f"Initializing Cedar-Solve with database: {database_path}...")
         try:
@@ -39,13 +59,24 @@ class CedarSolver(BaseSolver):
             raise
 
     def solve(self, image_path_or_obj):
+        """Solves the plate for a given image using Cedar-Solve.
+
+        Args:
+            image_path_or_obj: Path to the image file or a PIL Image object.
+
+        Returns:
+            A dictionary with keys 'ra', 'dec', 'roll', 'fov',
+            'matched_stars_count', 'matched_catID', 'matched_centroids',
+            'matched_stars', 'timestamp', and 'solver_type'.
+            Returns None if no solution is found or an error occurs.
+        """
         try:
             if isinstance(image_path_or_obj, str):
                 img = Image.open(image_path_or_obj)
             else:
                 img = image_path_or_obj
 
-            logger.info(f"Attempting to solve image with Cedar-Solve...")
+            logger.info("Attempting to solve image with Cedar-Solve...")
             solution = self.t3.solve_from_image(img, return_matches=True)
 
             if solution['RA'] is not None:
@@ -76,6 +107,14 @@ PlateSolver = CedarSolver
 _solver_instance = None
 
 def get_solver(database_path='default_database'):
+    """Returns a singleton instance of the CedarSolver.
+
+    Args:
+        database_path: Name or path of the star database to load.
+
+    Returns:
+        A CedarSolver instance or None if initialization fails.
+    """
     global _solver_instance
     if _solver_instance is None:
         try:
