@@ -6,7 +6,7 @@
 - [x] Task: Delete hardware modules (d9a71f8)
     - [ ] `git rm i2c.py`
     - [ ] `git rm ina219_reader.py`
-- [~] Task: Update `requirements.txt`
+- [x] Task: Update `requirements.txt` (8814d4e)
     - [ ] Remove `smbus2`
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Dependency & File Cleanup' (Protocol in workflow.md)
 
