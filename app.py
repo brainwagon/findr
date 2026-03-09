@@ -207,6 +207,7 @@ solver_result = {}
 test_mode = False
 is_paused = False
 latest_frame_bytes = None
+latest_frame_time = 0.0
 current_fps = 0.0
 last_frame_time = time.time()
 frame_count = 0
@@ -350,12 +351,13 @@ def calculate_solve_fps():
 
 def capture_and_process_frames():
     """Continuously captures frames and calculates live stream FPS."""
-    global latest_frame_bytes, current_fps, last_frame_time, frame_count
+    global latest_frame_bytes, latest_frame_time, current_fps, last_frame_time, frame_count
     while True:
         if is_paused:
             time.sleep(0.1)
             continue
         try:
+            now = time.time()
             if test_mode:
                 test_dir = "test-images"
                 if os.path.exists(test_dir):
@@ -366,6 +368,7 @@ def capture_and_process_frames():
                         with open(image_path, "rb") as f:
                             frame = f.read()
                         latest_frame_bytes = frame
+                        latest_frame_time = now
                     else:
                         time.sleep(1)
                         continue
@@ -377,9 +380,9 @@ def capture_and_process_frames():
                 camera.capture_file(buffer, name='lores', format='jpeg')
                 frame = buffer.getvalue()
                 latest_frame_bytes = frame
+                latest_frame_time = now
 
             frame_count += 1
-            now = time.time()
             dt = now - last_frame_time
             if dt >= 1.0:
                 current_fps = frame_count / dt
@@ -417,6 +420,7 @@ def solve_plate():
     
     t_start = time.time()
     img = None
+    frame_timestamp = 0.0
     try:
         t_capture_start = time.time()
         if test_mode:
@@ -433,16 +437,26 @@ def solve_plate():
                 return
             image_path = os.path.join(test_dir, random.choice(files))
             img = Image.open(image_path)
+            frame_timestamp = t_capture_start
         else:
             if latest_frame_bytes:
                 img = Image.open(io.BytesIO(latest_frame_bytes))
+                frame_timestamp = latest_frame_time
             else:
                 # Fallback capture if latest_frame_bytes is missing
                 buffer = io.BytesIO()
                 camera.capture_file(buffer, name='lores', format='jpeg')
                 buffer.seek(0)
                 img = Image.open(buffer)
+                frame_timestamp = time.time()
         t_capture_end = time.time()
+
+        # Check for stale frames (e.g. older than 5 seconds to be safe)
+        if not test_mode and (time.time() - frame_timestamp) > 5.0:
+            logger.warning(f"Solve skipped: frame is stale (age: {time.time() - frame_timestamp:.2f}s)")
+            solver_status = "failed"
+            solver_result = {"error": "Stale frame"}
+            return
 
         t_solve_start = time.time()
         solver = get_solver()
