@@ -335,37 +335,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
 
 
-    function updateSystemStats() {
-        fetch('/system-stats')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('cpu-temp').innerText = data.cpu_temp;
-                document.getElementById('cpu-load').innerText = data.cpu_load;
-                document.getElementById('voltage').innerText = data.voltage;
-                document.getElementById('current').innerText = data.current;
-                const lowVoltageWarningElement = document.getElementById('low-voltage-warning');
-                if (data.low_voltage_warning) {
-                    lowVoltageWarningElement.style.display = 'inline';
-                } else {
-                    lowVoltageWarningElement.style.display = 'none';
-                }
-                document.getElementById('power-source-display').innerText = data.power_source;
-                const batteryTimeContainer = document.getElementById('battery-time-remaining-container');
-                if (data.power_source === 'BATTERY') {
-                    batteryTimeContainer.style.display = 'inline';
-                    document.getElementById('battery-time-remaining').innerText = data.battery_time_remaining;
-                } else {
-                    batteryTimeContainer.style.display = 'none';
-                }
-            })
-            .catch(error => console.error('Error fetching system stats:', error));
-    }
-
-    // Fetch system stats every 5 seconds
-    setInterval(updateSystemStats, 15000);
-    // Initial call to populate system stats
-    updateSystemStats();
-
     const darkModeToggle = document.getElementById('dark_mode_toggle');
 
     function applyDarkMode(darkMode) {
