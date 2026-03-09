@@ -33,7 +33,7 @@ class PlateSolver:
                 img = image_path_or_obj
 
             logger.info(f"Attempting to solve image...")
-            solution = self.t3.solve_from_image(img)
+            solution = self.t3.solve_from_image(img, return_matches=True)
 
             if solution['RA'] is not None:
                 logger.info("Plate solve successful.")
