@@ -7,7 +7,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Research and Setup' (Protocol in workflow.md)
 
 ## Phase 2: Backend Integration
-- [ ] Task: Create a new module or service for plate solving logic.
+- [x] Task: Create a new module or service for plate solving logic. (85f2cf8)
 - [ ] Task: Write tests for the plate solving module using sample images.
 - [ ] Task: Implement the image capture and tetra3 solving logic.
 - [ ] Task: Integrate the plate solving module into the main Flask application.
