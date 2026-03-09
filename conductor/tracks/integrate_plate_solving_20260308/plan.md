@@ -13,7 +13,7 @@
 - [x] Task: Integrate the plate solving module into the main Flask application. (b12db25)
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Backend Integration' (Protocol in workflow.md)
 
-## Phase 3: Frontend Integration [checkpoint: e351c9f]
+## Phase 3: Frontend Integration [checkpoint: f33c934]
 - [x] Task: Update the web interface to include a section for plate solving results. (5088da3)
 - [x] Task: Implement a button or trigger to initiate a plate solve. (5088da3)
 - [x] Task: Use AJAX or WebSockets to update the UI with real-time solving results. (7d9b8cc)
