@@ -15,5 +15,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Remove I2C and System Stats Functionality**
+- [~] **Track: Remove I2C and System Stats Functionality**
 *Link: [./tracks/remove_i2c_stats_20260309/](./tracks/remove_i2c_stats_20260309/)*

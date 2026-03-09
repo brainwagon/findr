@@ -2,7 +2,6 @@ Flask
 picamera
 numpy
 pillow
-smbus2
 scipy
 pyephem
 requests
