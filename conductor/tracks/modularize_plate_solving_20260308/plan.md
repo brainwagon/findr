@@ -21,7 +21,7 @@
 ## Phase 2: cedar-solve Integration
 *Goal: Add cedar-solve as an alternative solver.*
 
-- [ ] Task: Install `cedar-solve` and dependencies
+- [~] Task: Install `cedar-solve` and dependencies
     - [ ] Add `cedar-solve` to `requirements.txt`.
     - [ ] Verify installation in development environment.
 - [ ] Task: Implement `CedarSolver` concrete class
