@@ -8,7 +8,7 @@
 
 ## Phase 2: Backend Integration
 - [x] Task: Create a new module or service for plate solving logic. (85f2cf8)
-- [ ] Task: Write tests for the plate solving module using sample images.
+- [x] Task: Write tests for the plate solving module using sample images. (9cc1ca0)
 - [ ] Task: Implement the image capture and tetra3 solving logic.
 - [ ] Task: Integrate the plate solving module into the main Flask application.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Backend Integration' (Protocol in workflow.md)
