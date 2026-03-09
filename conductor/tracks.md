@@ -12,3 +12,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [~] **Track: Modularize plate solving to support tetra3 and cedar-solve**
 *Link: [./tracks/modularize_plate_solving_20260308/](./tracks/modularize_plate_solving_20260308/)*
+
+---
+
+- [ ] **Track: Remove I2C and System Stats Functionality**
+*Link: [./tracks/remove_i2c_stats_20260309/](./tracks/remove_i2c_stats_20260309/)*
