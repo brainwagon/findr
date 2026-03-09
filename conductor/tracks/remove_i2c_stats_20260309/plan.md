@@ -3,7 +3,7 @@
 ## Phase 1: Dependency & File Cleanup
 *Goal: Remove the physical files and external dependencies that are no longer needed.*
 
-- [ ] Task: Delete hardware modules
+- [x] Task: Delete hardware modules (d9a71f8)
     - [ ] `git rm i2c.py`
     - [ ] `git rm ina219_reader.py`
 - [ ] Task: Update `requirements.txt`
