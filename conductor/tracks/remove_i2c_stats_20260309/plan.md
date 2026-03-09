@@ -30,11 +30,11 @@
     - [ ] Remove the `setInterval` call that polls the `/system-stats` endpoint.
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Frontend & UI Cleanup' (Protocol in workflow.md) (671ac05)
 
-## Phase 4: Final Validation
+## Phase 4: Final Validation [checkpoint: dbb94c2]
 *Goal: Ensure the application is stable and free of dead code.*
 
-- [~] Task: Verify application stability
+- [x] Task: Verify application stability (dbb94c2)
     - [ ] Run the app and ensure it starts without errors.
-- [ ] Task: Check for dead references
+- [x] Task: Check for dead references (dbb94c2)
     - [ ] Search the codebase for any remaining 'ina219', 'i2c', or 'system-stats' strings.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Final Validation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Final Validation' (Protocol in workflow.md) (dbb94c2)
