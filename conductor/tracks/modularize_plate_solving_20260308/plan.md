@@ -11,7 +11,7 @@
     - [ ] Create `tests/test_tetra3_solver.py` with failing tests for the `tetra3` solver.
     - [ ] Implement `Tetra3Solver` as a subclass of `BaseSolver`.
     - [ ] Verify tests pass and coverage > 80%.
-- [ ] Task: Implement `SolverManager` to handle solver switching
+- [x] Task: Implement `SolverManager` to handle solver switching (aad0a46)
     - [ ] Create `tests/test_solver_manager.py` with failing tests for initialization, switching, and default solver.
     - [ ] Implement `SolverManager` with methods `set_solver(type)`, `get_solver()`, and `solve(image)`.
     - [ ] Update `get_solver()` singleton to use `SolverManager`.
