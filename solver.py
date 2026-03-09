@@ -42,6 +42,7 @@ class PlateSolver:
                     'dec': solution['Dec'],
                     'roll': solution['Roll'],
                     'fov': solution['FOV'],
+                    'matched_stars_count': len(solution.get('matched_catID', [])),
                     'timestamp': solution.get('timestamp')
                 }
             else:

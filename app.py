@@ -272,8 +272,16 @@ def format_radec_fixed_width(angle_obj, is_ra=True, total_width=10, decimal_plac
     
     return formatted_time.ljust(total_width)[:total_width]
 
-from picamera2 import Picamera2
-
+try:
+    from picamera2 import Picamera2
+    camera = Picamera2()
+    # Trigger an internal check to see if libcamera is actually available
+    _ = camera.camera_properties
+    print("Picamera2 initialized successfully.")
+except (ImportError, ModuleNotFoundError, Exception) as e:
+    print(f"Picamera2 initialization failed: {e}. Falling back to dummy camera.")
+    from camera_dummy import Picamera2
+    camera = Picamera2()
 
 app = Flask(__name__)
 
@@ -582,6 +590,7 @@ def solve_plate():
                 "az": f"{math.degrees(target.az):.1f}",
                 "solved_image_url": "/solved_field.jpg",
                 "constellation": ephem.constellation((radians(ra_val), radians(dec_val)))[0],
+                "matched_stars_count": result.get('matched_stars_count', 0),
             }
 
             # For now, we'll still use the original image as the "solved" image 
@@ -727,8 +736,6 @@ def set_test_mode():
     data = request.json
     test_mode = data.get('test_mode', False)
     return "", 204
-
-camera = Picamera2()
 
 # Initialize camera and set initial controls once
 config = camera.create_still_configuration(

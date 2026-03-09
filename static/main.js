@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     clearInterval(solveStatusPollInterval);
                     isSolving = false; // Reset flag
                     if (currentVideoMode === 'solved') {
-                        solveField();
+                        setTimeout(solveField, 500);
                     }
                 } else if (data.status === 'failed') {
                     raDisplay.innerText = '--:--:--.-';
@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     clearInterval(solveStatusPollInterval);
                     isSolving = false; // Reset flag
                     if (currentVideoMode === 'solved') {
-                        solveField();
+                        setTimeout(solveField, 500);
                     }
                 } else if (data.status === 'paused') {
                     clearInterval(solveStatusPollInterval);
