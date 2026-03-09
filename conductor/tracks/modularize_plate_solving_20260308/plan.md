@@ -7,7 +7,7 @@
     - [ ] Create `tests/test_base_solver.py` with failing tests for the interface.
     - [ ] Define `BaseSolver` with an abstract method `solve(image)`.
     - [ ] Verify tests pass for the interface definition.
-- [ ] Task: Refactor `tetra3` logic into `Tetra3Solver` class
+- [x] Task: Refactor `tetra3` logic into `Tetra3Solver` class (c67b811)
     - [ ] Create `tests/test_tetra3_solver.py` with failing tests for the `tetra3` solver.
     - [ ] Implement `Tetra3Solver` as a subclass of `BaseSolver`.
     - [ ] Verify tests pass and coverage > 80%.
