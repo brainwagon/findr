@@ -3,7 +3,7 @@
 ## Phase 1: Foundation & Modularization (ABC & tetra3)
 *Goal: Define a common interface and refactor existing tetra3 logic into a concrete class.*
 
-- [ ] Task: Create `BaseSolver` Abstract Base Class in `solver.py`
+- [x] Task: Create `BaseSolver` Abstract Base Class in `solver.py` (e1a8b18)
     - [ ] Create `tests/test_base_solver.py` with failing tests for the interface.
     - [ ] Define `BaseSolver` with an abstract method `solve(image)`.
     - [ ] Verify tests pass for the interface definition.
