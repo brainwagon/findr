@@ -90,5 +90,27 @@ To ensure this works:
     sudo systemctl enable --now avahi-daemon
     ```
 3.  **Access:** Once running, you can find your device at `http://<your-hostname>.local:8080`.
+
+## Auto-start on Boot (systemd)
+The application is configured to start automatically on boot using **systemd**.
+
+### Management Commands:
+- **Check Status:** `sudo systemctl status findr.service`
+- **Restart Service:** `sudo systemctl restart findr.service`
+- **Stop Service:** `sudo systemctl stop findr.service`
+- **View Logs:** `journalctl -u findr.service -f`
+- **Disable Auto-start:** `sudo systemctl disable findr.service`
+
+### Manual Installation (if needed):
+1.  Copy `findr.service` to `/etc/systemd/system/`:
+    ```bash
+    sudo cp findr.service /etc/systemd/system/findr.service
+    ```
+2.  Reload systemd and enable:
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl enable findr.service
+    sudo systemctl start findr.service
+    ```
 - The solver uses `tetra3`. Ensure you have a valid tetra3 database installed (it will attempt to load the default one if available).
 - Use **Test Mode** in the web interface to cycle through pre-loaded images in the `test-images/` directory to verify solver performance without live hardware.
