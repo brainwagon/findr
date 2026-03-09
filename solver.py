@@ -26,13 +26,12 @@ class BaseSolver(ABC):
     """Abstract base class for plate solvers."""
 
     @abstractmethod
-    def solve(self, image_path_or_obj):
+    def solve(self, image_path_or_obj, **kwargs):
         """Solves the plate for a given image.
 
         Args:
             image_path_or_obj: Path to the image file or a PIL Image object.
-
-        Returns:
+            **kwargs: Extra arguments for the solver.
             A dictionary containing the solve results (ra, dec, roll, fov, etc.)
             or None if the solve failed.
         """
@@ -58,11 +57,12 @@ class CedarSolver(BaseSolver):
             logger.error(f"Failed to initialize Cedar-Solve: {e}")
             raise
 
-    def solve(self, image_path_or_obj):
+    def solve(self, image_path_or_obj, **kwargs):
         """Solves the plate for a given image using Cedar-Solve.
 
         Args:
             image_path_or_obj: Path to the image file or a PIL Image object.
+            **kwargs: Extra arguments passed to solve_from_image (e.g., max_returned).
 
         Returns:
             A dictionary with keys 'ra', 'dec', 'roll', 'fov',
@@ -77,7 +77,7 @@ class CedarSolver(BaseSolver):
                 img = image_path_or_obj
 
             logger.info("Attempting to solve image with Cedar-Solve...")
-            solution = self.t3.solve_from_image(img, return_matches=True)
+            solution = self.t3.solve_from_image(img, return_matches=True, **kwargs)
 
             if solution['RA'] is not None:
                 logger.info("Plate solve successful.")

@@ -240,6 +240,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
       .then(response => response.json())
       .then(data => {
         if (data.status === 'solved' || data.status === 'failed') {
+          clearInterval(solveStatusPollInterval);
+
           if (data.status === 'solved') {
             raDisplay.innerText = data.ra_hms;
             decDisplay.innerText = data.dec_dms;
@@ -249,7 +251,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             videoModeOverlay.classList.remove('solve-fail');
             videoModeOverlay.classList.add('solve-success');
             matchedStarsOverlay.innerText = data.matched_stars_count + ' stars';
-            matchedStarsOverlay.style.display = 'block'; // Show the overlay
+            matchedStarsOverlay.style.display = 'block';
           } else {
             raDisplay.innerText = '--:--:--.-';
             decDisplay.innerText = '--:--:--.-';
@@ -259,19 +261,31 @@ document.addEventListener('DOMContentLoaded', (event) => {
             videoModeOverlay.classList.remove('solve-success');
             videoModeOverlay.classList.add('solve-fail');
             matchedStarsOverlay.innerText = '';
-            matchedStarsOverlay.style.display = 'none'; // Hide the overlay
+            matchedStarsOverlay.style.display = 'none';
           }
 
           // Refresh solved image once per result
           if (currentVideoMode === 'solved') {
             const url = '/solved_field.jpg?t=' + new Date().getTime();
-            videoFeedImg.src = url;
-          }
+            
+            // Define a cleanup function to ensure we always reset isSolving
+            const finishCycle = () => {
+                videoFeedImg.onload = null;
+                videoFeedImg.onerror = null;
+                isSolving = false;
+                if (currentVideoMode === 'solved') {
+                    setTimeout(solveField, 50);
+                }
+            };
 
-          clearInterval(solveStatusPollInterval);
-          isSolving = false; // Reset flag
-          if (currentVideoMode === 'solved') {
-            setTimeout(solveField, 1000); // Wait 1s between solves to be gentle
+            videoFeedImg.onload = finishCycle;
+            videoFeedImg.onerror = finishCycle;
+            // Safety timeout: if image fails to load in 2s, continue anyway
+            setTimeout(() => { if (isSolving) finishCycle(); }, 2000);
+            
+            videoFeedImg.src = url;
+          } else {
+            isSolving = false;
           }
         }
       })
@@ -283,24 +297,21 @@ document.addEventListener('DOMContentLoaded', (event) => {
   }
 
   function solveField() {
+    // CRITICAL: isSolving must be checked synchronously and set immediately
     if (isSolving || currentVideoMode !== 'solved') return;
+    isSolving = true; 
 
-    isSolving = true; // Set flag
-
-    fetch('/solve', {
-      method: 'POST'
-    })
+    fetch('/solve', { method: 'POST' })
       .then(response => response.json())
       .then(data => {
         if (data.status === 'solving') {
-          // Start polling for status every 500ms
-          solveStatusPollInterval = setInterval(pollSolveStatus, 500);
+          solveStatusPollInterval = setInterval(pollSolveStatus, 100);
         } else {
           isSolving = false;
         }
       })
       .catch(error => {
-        console.error('Error:', error);
+        console.error('Error initiating solve:', error);
         isSolving = false;
       });
   }

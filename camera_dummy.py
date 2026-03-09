@@ -56,6 +56,10 @@ class Picamera2:
     def start(self):
         pass
 
+    def close(self):
+        """Dummy close method."""
+        pass
+
     def set_controls(self, controls):
         """Prints the controls for debugging."""
         safe_controls = {k: v for k, v in controls.items() if k in self.camera_controls}
