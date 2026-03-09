@@ -4,6 +4,7 @@ A Raspberry Pi-based telescope finder and remote camera control system
 providing a web interface for live monitoring and plate solving.
 """
 
+import atexit
 import configparser
 import csv
 import datetime
