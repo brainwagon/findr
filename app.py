@@ -148,9 +148,6 @@ config.read('location.ini')
 observer.lat = config.get('location', 'lat', fallback='0')
 observer.lon = config.get('location', 'lon', fallback='0')
 
-# Load constellation boundaries
-load_constellation_boundaries()
-
 
 # libraries needed to solve for a "proper" WCS coordinate system
 
@@ -231,6 +228,8 @@ def load_constellation_boundaries():
                 constellation_boundaries[constellation].append((ra_d, dec_d))
     except FileNotFoundError:
         print("Warning: bound_20.dat not found. Constellation boundaries will not be drawn.")
+
+load_constellation_boundaries()
 
 def point_stellarium(ra_radians, dec_radians, stellarium_url="http://192.168.1.139:8090"):
     endpoint = f"{stellarium_url}/api/main/view" 
