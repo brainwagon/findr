@@ -36,6 +36,7 @@ dtparam=power_force_3v3_pwm=1
 ├── solve.py                # Solve pipeline: ImageSource, run_solve, SolveOutcome, SolveStore
 ├── overlay.py              # Draws star labels and constellation boundaries on solved images
 ├── catalog.py              # Star names, constellation boundaries and label font
+├── camera.py               # Camera adapter: open_camera() and the Camera interface
 ├── camera_dummy.py         # Dummy camera interface for non-Pi development
 ├── power.py                # INA219 driver, state of charge and PowerReading
 ├── ina219_reader.py        # Standalone INA219 power monitor utility
