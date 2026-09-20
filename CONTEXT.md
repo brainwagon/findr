@@ -47,6 +47,12 @@ The single place that holds the status of the current solve and its Solve outcom
 so that the solver thread and the web request that reads it do not disagree.
 _Avoid_: "solver state", "globals".
 
+**Power reading**:
+A snapshot of the finder's power supply: bus voltage and current, whether it is on
+AC or battery, the estimated state of charge and time remaining, and whether the
+voltage is low.
+_Avoid_: "power stats", "battery info".
+
 **Test mode**:
 A mode in which the Image source is the pre-loaded test-image set rather than the
 live camera, so the Solver backends can be exercised without hardware.

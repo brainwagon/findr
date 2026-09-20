@@ -37,7 +37,7 @@ dtparam=power_force_3v3_pwm=1
 ├── overlay.py              # Draws star labels and constellation boundaries on solved images
 ├── catalog.py              # Star names, constellation boundaries and label font
 ├── camera_dummy.py         # Dummy camera interface for non-Pi development
-├── i2c.py                  # I2C peripheral support module
+├── power.py                # INA219 driver, state of charge and PowerReading
 ├── ina219_reader.py        # Standalone INA219 power monitor utility
 ├── requirements.txt        # Python dependencies (excluding system libraries)
 ├── REQUIREMENTS.md         # Original project requirements document
