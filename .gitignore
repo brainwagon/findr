@@ -1,3 +1,5 @@
 static/solved_field.jpg
 location.ini
 __pycache__/
+venv/
+.opencode/

@@ -439,6 +439,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
         applyDarkMode(localStorage.getItem('darkMode'));
     });
 
-    // Apply dark mode on page load
+    // Apply dark mode on page load (dark mode is the default)
+    if (!localStorage.getItem('darkMode')) {
+        localStorage.setItem('darkMode', 'enabled');
+    }
     applyDarkMode(localStorage.getItem('darkMode'));
 });

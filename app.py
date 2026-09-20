@@ -829,4 +829,5 @@ solve_fps_thread = threading.Thread(target=calculate_solve_fps)
 solve_fps_thread.daemon = True
 solve_fps_thread.start()
 logging.getLogger("werkzeug").setLevel(logging.WARNING)
-app.run(host='0.0.0.0', port=8080, threaded=True)
+port = int(os.environ.get("PORT", 8080))
+app.run(host='0.0.0.0', port=port, threaded=True)
