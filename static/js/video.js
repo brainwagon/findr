@@ -3,6 +3,8 @@ import { solveField } from './solve.js';
 
 const MODE_LIVE = 'live';
 const MODE_SOLVED = 'solved';
+const FEED_REFRESH_MS = 200;
+const STATUS_POLL_MS = 1000;
 
 export function initVideo() {
   const videoFeedImg = document.getElementById('video_feed_img');
@@ -15,6 +17,8 @@ export function initVideo() {
 
   matchedStarsOverlay.style.display = 'none';
 
+  let currentUrl = null;
+
   function updateFeed() {
     const solved = get('currentVideoMode') !== MODE_LIVE;
     const base = solved ? '/solved_field.jpg' : '/video_feed';
@@ -22,7 +26,22 @@ export function initVideo() {
     if (solved && !get('showOverlay')) {
       url += '&overlay=0';
     }
+    currentUrl = url;
     videoFeedImg.src = url;
+  }
+
+  // Refresh the solved image when a new solve lands, but no faster than
+  // FEED_REFRESH_MS, so a fast solve loop cannot flood the browser.
+  let feedPending = false;
+  function scheduleFeed() {
+    if (feedPending) return;
+    feedPending = true;
+    setTimeout(() => {
+      feedPending = false;
+      if (get('currentVideoMode') !== MODE_LIVE) {
+        updateFeed();
+      }
+    }, FEED_REFRESH_MS);
   }
 
   function updateOverlay() {
@@ -33,8 +52,27 @@ export function initVideo() {
     set('currentVideoMode', videoModeSelect.value);
   });
 
+  // If the stream or image drops, retry once, but only while that URL is still
+  // the one we want (changing src fires an error on the abandoned request).
+  videoFeedImg.addEventListener('error', () => {
+    const droppedUrl = currentUrl;
+    setTimeout(() => {
+      if (currentUrl === droppedUrl && droppedUrl) {
+        videoFeedImg.src = droppedUrl + '&r=' + Date.now();
+      }
+    }, 1000);
+  });
+
   subscribe((name, value) => {
     if (name === 'showOverlay') {
+      updateFeed();
+      return;
+    }
+    if (name === 'solveTick') {
+      scheduleFeed();
+      return;
+    }
+    if (name === 'feedTick') {
       updateFeed();
       return;
     }
@@ -54,9 +92,8 @@ export function initVideo() {
     }
   });
 
-  // Update the feed and FPS display every 100ms.
+  // Update the pause/FPS readout; the image itself is refreshed on demand.
   setInterval(() => {
-    updateFeed();
     fetch('/get_pause_state')
       .then((response) => response.json())
       .then((data) => {
@@ -75,7 +112,7 @@ export function initVideo() {
           .catch((error) => console.error('Error fetching FPS:', error));
       })
       .catch((error) => console.error('Error fetching pause state:', error));
-  }, 100);
+  }, STATUS_POLL_MS);
 
   pauseButton.addEventListener('click', () => {
     fetch('/toggle_pause', { method: 'POST' })

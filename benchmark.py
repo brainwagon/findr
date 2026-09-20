@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass
 from statistics import mean
 
-from solver import BACKENDS, LibrarySolver
+from solver import BACKENDS, make_solver
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_IMAGES = os.path.join(BASE_DIR, "test-images")
@@ -45,7 +45,7 @@ def benchmark_backend(key, frames, repeat=1, warmup=True):
     list of per-solve times.
     """
     start = time.perf_counter()
-    solver = LibrarySolver(BACKENDS[key])
+    solver = make_solver(key)
     load_seconds = time.perf_counter() - start
 
     if warmup and frames:
@@ -75,6 +75,12 @@ def cpu_model():
             for line in f:
                 if line.startswith("model name"):
                     return line.split(":", 1)[1].strip()
+    except IOError:
+        pass
+    # ARM boards (e.g. a Raspberry Pi) name the board in the device tree.
+    try:
+        with open("/proc/device-tree/model") as f:
+            return f.read().strip().rstrip("\x00")
     except IOError:
         pass
     return platform.processor() or "unknown CPU"

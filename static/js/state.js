@@ -3,6 +3,8 @@ const values = {
   currentVideoMode: 'live',
   isSolving: false,
   showOverlay: true,
+  solveTick: 0,
+  feedTick: 0,
 };
 
 const listeners = new Set();

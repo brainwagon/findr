@@ -1,4 +1,5 @@
-import { set } from './state.js';
+import { get, set } from './state.js';
+import { solveField } from './solve.js';
 
 const DEFAULT_SENSOR = { sensorWidth: 1456, sensorHeight: 1088 };
 
@@ -15,6 +16,7 @@ export function initControls() {
   const zoomSelect = document.getElementById('zoom_select');
   const testModeCheckbox = document.getElementById('test_mode_checkbox');
   const overlayCheckbox = document.getElementById('overlay_checkbox');
+  const boundariesCheckbox = document.getElementById('boundaries_checkbox');
 
   function updateControlValueDisplay() {
     brightnessValueSpan.innerText = brightnessSlider.value;
@@ -22,18 +24,14 @@ export function initControls() {
     sharpnessValueSpan.innerText = sharpnessSlider.value;
   }
 
-  function sendControls() {
-    const controls = {
-      gain: gainSelect.value,
-      exposure_index: exposureSelect.value,
-      brightness: brightnessSlider.value,
-      contrast: contrastSlider.value,
-      sharpness: sharpnessSlider.value,
-    };
+  // Send only the control that changed. Sending the whole set on load would
+  // push the UI's defaults at the camera, which on a USB camera means taking
+  // it off auto exposure into a dark manual exposure before the user has asked.
+  function sendControl(control) {
     fetch('/set_controls', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(controls),
+      body: JSON.stringify(control),
     });
     updateControlValueDisplay();
   }
@@ -80,6 +78,12 @@ export function initControls() {
       testModeCheckbox.checked = settings.test_mode;
       sendTestMode();
     }
+    if (settings.gain !== undefined || settings.exposure_index !== undefined) {
+      sendControl({
+        gain: settings.gain,
+        exposure_index: settings.exposure_index,
+      });
+    }
   }
 
   zoomSelect.addEventListener('change', () => {
@@ -93,17 +97,38 @@ export function initControls() {
     sendScalerCrop(crop);
   });
 
-  gainSelect.addEventListener('change', sendControls);
-  exposureSelect.addEventListener('change', sendControls);
-  brightnessSlider.addEventListener('input', sendControls);
-  contrastSlider.addEventListener('input', sendControls);
-  sharpnessSlider.addEventListener('input', sendControls);
+  gainSelect.addEventListener('change', () => {
+    sendControl({ gain: gainSelect.value });
+  });
+  exposureSelect.addEventListener('change', () => {
+    sendControl({ exposure_index: exposureSelect.value });
+  });
+  brightnessSlider.addEventListener('input', () => {
+    sendControl({ brightness: brightnessSlider.value });
+  });
+  contrastSlider.addEventListener('input', () => {
+    sendControl({ contrast: contrastSlider.value });
+  });
+  sharpnessSlider.addEventListener('input', () => {
+    sendControl({ sharpness: sharpnessSlider.value });
+  });
   testModeCheckbox.addEventListener('change', sendTestMode);
   overlayCheckbox.addEventListener('change', () => {
     set('showOverlay', overlayCheckbox.checked);
   });
+  boundariesCheckbox.addEventListener('change', () => {
+    fetch('/set_boundaries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ boundaries: boundariesCheckbox.checked }),
+    });
+    // The server skips the boundary work at solve time, so refresh the
+    // displayed image with a new solve.
+    if (get('currentVideoMode') !== 'live' && !get('isSolving')) {
+      solveField();
+    }
+  });
   saveSettingsButton.addEventListener('click', saveSettings);
 
   loadSettings();
-  sendControls();
 }

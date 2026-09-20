@@ -32,6 +32,23 @@ Where the image to be solved comes from: the live camera, or the pre-loaded
 test-image set used in Test mode.
 _Avoid_: "capture", "frame provider".
 
+**Camera**:
+A device findr can capture from, seen through the backend-neutral `Camera`
+interface: a preview JPEG, a still JPEG, a device description and adjustable
+controls. Concrete adapters wrap picamera2 (CSI cameras on a Raspberry Pi) or
+OpenCV (USB webcams and laptop cameras).
+_Avoid_: "webcam" (one kind of camera), "sensor" (the INA219 is also a sensor).
+
+**Camera backend**:
+The library a Camera adapter is built on: libcamera via picamera2 for CSI
+cameras, or OpenCV for USB and laptop cameras.
+_Avoid_: "driver".
+
+**Camera manager**:
+The single place that holds the active Camera and the cameras the machine
+offers, and that switches between them. It is not itself a Camera.
+_Avoid_: "camera" (ambiguous with the device), "dispatcher".
+
 **Catalog**:
 The reference data used to label a solved field: star identifiers, constellation
 boundaries and the label font. Distinct from a Solver backend's own star database,

@@ -19,22 +19,41 @@ from catalog import decode_simbad_greek
 logger = logging.getLogger(__name__)
 
 
-def render(image, result, catalog, constellation):
-    """Draw star labels and constellation boundaries onto an image.
+def render(image, result, catalog, constellation, boundaries=True):
+    """Draw star labels, and optionally constellation boundaries, on an image.
 
     Args:
         image: the PIL image to annotate; mutated and returned.
         result: the SolverResult from the solve.
         catalog: a Catalog of star names, boundaries and the label font.
         constellation: the constellation name, used to pick boundaries.
+        boundaries: when False, skip the (expensive) boundary drawing.
 
     Returns:
         The annotated image.
     """
-    draw = ImageDraw.Draw(image)
-    _draw_star_labels(draw, result, catalog)
+    draw_labels(image, result, catalog)
+    if boundaries:
+        draw_boundaries(image, result, constellation, catalog.boundaries)
+    return image
+
+
+def draw_labels(image, result, catalog):
+    """Label each matched star with its catalogue name."""
+    _draw_star_labels(ImageDraw.Draw(image), result, catalog)
+    return image
+
+
+def draw_boundaries(image, result, constellation, boundaries):
+    """Draw the constellation's boundary lines, best-effort.
+
+    Failures are logged, never raised, because an Overlay is cosmetic and must
+    not fail a solve.
+    """
     try:
-        _draw_boundaries(draw, result, constellation, catalog.boundaries)
+        _draw_boundaries(
+            ImageDraw.Draw(image), result, constellation, boundaries
+        )
     except Exception as e:
         logger.warning("Constellation boundaries not drawn: %s", e)
     return image

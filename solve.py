@@ -7,8 +7,8 @@ as a `SolveOutcome`. Its dependencies are injected, so it can be tested without
 a camera or a star database.
 
 Image acquisition sits behind the `ImageSource` seam: `TestImageSource` for Test
-mode, `CameraImageSource` for the live camera. The `SolveStore` holds the status
-of the current solve and its outcome for the web layer.
+mode, `PreviewFrameSource` for the live preview frame. The `SolveStore` holds the
+status of the current solve and its outcome for the web layer.
 """
 
 import io
@@ -17,6 +17,7 @@ import math
 import os
 import random
 import threading
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
@@ -102,18 +103,29 @@ class TestImageSource(ImageSource):
         return _load_image(os.path.join(self._directory, self._rng.choice(files)))
 
 
-class CameraImageSource(ImageSource):
-    """Acquire a lores frame from the camera."""
+class PreviewFrameSource(ImageSource):
+    """Acquire the frame the streaming loop most recently captured.
 
-    def __init__(self, camera, name="lores"):
-        self._camera = camera
-        self._name = name
+    The camera can only service one capture at a time, so instead of asking it
+    for a second frame (which contends with the live preview and destabilised
+    libcamera) the solve reuses the newest preview frame. `frame_provider`
+    returns the latest JPEG bytes, or None before the first frame arrives.
+    """
+
+    def __init__(self, frame_provider, timeout=2.0, interval=0.02):
+        self._frame_provider = frame_provider
+        self._timeout = timeout
+        self._interval = interval
 
     def acquire(self):
-        buffer = io.BytesIO()
-        self._camera.capture_file(buffer, name=self._name, format="jpeg")
-        buffer.seek(0)
-        return _load_image(buffer)
+        deadline = time.monotonic() + self._timeout
+        while True:
+            data = self._frame_provider()
+            if data:
+                return _load_image(io.BytesIO(data))
+            if time.monotonic() >= deadline:
+                raise ImageSourceError("No preview frame available.")
+            time.sleep(self._interval)
 
 
 def _load_image(source):
@@ -151,7 +163,8 @@ def format_radec_fixed_width(angle_obj, is_ra=True, total_width=10, decimal_plac
     return formatted.ljust(total_width)[:total_width]
 
 
-def run_solve(image, solver, observer, catalog, clock=ephem.now):
+def run_solve(image, solver, observer, catalog, clock=ephem.now,
+              boundaries=True):
     """Solve one image and return a SolveOutcome.
 
     Args:
@@ -160,6 +173,7 @@ def run_solve(image, solver, observer, catalog, clock=ephem.now):
         observer: an ephem.Observer giving the observing site.
         catalog: a Catalog used to label stars and draw boundaries.
         clock: a callable returning the observation time; injected for tests.
+        boundaries: when False, skip the constellation-boundary annotation.
 
     Returns:
         A SolveOutcome; `error` is set when no solution was found.
@@ -193,7 +207,7 @@ def run_solve(image, solver, observer, catalog, clock=ephem.now):
     )[0]
 
     raw_image = image.copy()
-    overlay.render(image, result, catalog, constellation)
+    overlay.render(image, result, catalog, constellation, boundaries=boundaries)
 
     return SolveOutcome(
         ra=ra_val,

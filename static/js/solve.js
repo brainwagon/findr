@@ -1,7 +1,12 @@
 import { get, set } from './state.js';
 
 const MODE_SOLVED = 'solved';
-let solveStatusPollInterval;
+const POLL_INTERVAL_MS = 50;
+
+// Guards against two solve loops running at once. Without it, overlapping
+// status polls can each start a new loop, which piles up requests until the
+// browser runs out of connections (net::ERR_INSUFFICIENT_RESOURCES).
+let running = false;
 
 function showSolved(data) {
   document.getElementById('ra-display').innerText = data.ra_hms;
@@ -35,47 +40,48 @@ function showFailed() {
   stars.style.display = 'none';
 }
 
-function pollSolveStatus() {
-  fetch('/solve_status')
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.status === 'solved' || data.status === 'failed') {
-        if (data.status === 'solved') {
-          showSolved(data);
-        } else {
-          showFailed();
-        }
-        clearInterval(solveStatusPollInterval);
-        set('isSolving', false);
-        if (get('currentVideoMode') === MODE_SOLVED) {
-          setTimeout(solveField, 500);
-        }
-      } else if (data.status === 'paused') {
-        clearInterval(solveStatusPollInterval);
-        set('isSolving', false);
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function solveLoop() {
+  if (running) return;
+  running = true;
+  set('isSolving', true);
+  try {
+    // Keep solving for as long as Solved mode is selected. Each iteration
+    // waits for the previous solve to finish, so requests never overlap and
+    // the loop paces itself at whatever rate the backend can manage.
+    while (get('currentVideoMode') === MODE_SOLVED) {
+      const started = await fetch('/solve', { method: 'POST' });
+      const startData = await started.json();
+      if (startData.status !== 'solving') break;
+
+      let data;
+      do {
+        await delay(POLL_INTERVAL_MS);
+        const response = await fetch('/solve_status');
+        data = await response.json();
+      } while (data.status === 'solving');
+
+      if (data.status === 'solved') {
+        showSolved(data);
+      } else if (data.status === 'failed') {
+        showFailed();
+      } else {
+        // "paused", or an unexpected status: stop the loop.
+        break;
       }
-    })
-    .catch((error) => {
-      console.error('Error fetching solver status:', error);
-      clearInterval(solveStatusPollInterval);
-    });
+      set('solveTick', get('solveTick') + 1);
+    }
+  } catch (error) {
+    console.error('Solve loop stopped:', error);
+  } finally {
+    running = false;
+    set('isSolving', false);
+  }
 }
 
 export function solveField() {
-  if (get('isSolving')) return;
-  set('isSolving', true);
-
-  fetch('/solve', { method: 'POST' })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.status === 'solving') {
-        solveStatusPollInterval = setInterval(pollSolveStatus, 200);
-      } else {
-        set('isSolving', false);
-      }
-    })
-    .catch((error) => {
-      console.error('Error:', error);
-      set('isSolving', false);
-    });
+  solveLoop();
 }

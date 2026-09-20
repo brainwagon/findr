@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 import ephem
 from PIL import Image, ImageFont
@@ -75,6 +76,22 @@ class TestRunSolve(unittest.TestCase):
         self.assertIsNotNone(outcome.image)
         self.assertIsNotNone(outcome.raw_image)
         self.assertIsNot(outcome.raw_image, outcome.image)
+
+    def test_boundaries_false_skips_boundary_drawing(self):
+        with mock.patch('overlay.draw_boundaries') as draw:
+            run_solve(
+                black_image(), FakeSolver(SOLUTION), make_observer(),
+                make_catalog(), clock=fixed_clock, boundaries=False,
+            )
+            draw.assert_not_called()
+
+    def test_boundaries_true_draws_boundaries(self):
+        with mock.patch('overlay.draw_boundaries') as draw:
+            run_solve(
+                black_image(), FakeSolver(SOLUTION), make_observer(),
+                make_catalog(), clock=fixed_clock, boundaries=True,
+            )
+            draw.assert_called_once()
 
     def test_failure_sets_error_and_keeps_image(self):
         image = black_image()

@@ -1,7 +1,9 @@
 import unittest
+from unittest import mock
 
 from PIL import Image, ImageFont
 
+import overlay
 from catalog import Catalog
 from overlay import render
 from solver import SolverResult
@@ -44,6 +46,21 @@ class TestRender(unittest.TestCase):
         before = image.tobytes()
         render(image, result, make_catalog(boundaries={}), "Nope")
         self.assertEqual(image.tobytes(), before)
+
+    def test_boundaries_flag_controls_boundary_drawing(self):
+        result = SolverResult(
+            ra=0, dec=0, roll=0, fov=0,
+            matched_cat_ids=[1], matched_centroids=[(50, 50)],
+        )
+        catalog = make_catalog({1: "alf Cen"})
+
+        with mock.patch.object(overlay, "draw_boundaries") as draw:
+            render(black_image(), result, catalog, "Cen", boundaries=False)
+            draw.assert_not_called()
+
+        with mock.patch.object(overlay, "draw_boundaries") as draw:
+            render(black_image(), result, catalog, "Cen", boundaries=True)
+            draw.assert_called_once()
 
     def test_boundary_failure_is_logged_not_raised(self):
         # One matched star is too few to fit a WCS, so astropy raises; render

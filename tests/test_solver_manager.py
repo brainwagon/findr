@@ -1,6 +1,6 @@
 import unittest
 
-from solver import BaseSolver, LibrarySolver, SolverManager, SolverResult
+from solver import BACKENDS, BaseSolver, LibrarySolver, SolverManager, SolverResult
 
 
 class MockSolver(BaseSolver):
@@ -34,9 +34,8 @@ class TestSolverManager(unittest.TestCase):
 
     def test_available_solvers(self):
         """The available solvers come from the registry, not a hardcoded list."""
-        self.assertEqual(
-            set(self.manager.available_solvers()), {'tetra3', 'cedar-solve'}
-        )
+        self.assertEqual(set(self.manager.available_solvers()), set(BACKENDS))
+        self.assertLessEqual({'tetra3', 'cedar-solve'}, set(BACKENDS))
 
     def test_invalid_solver(self):
         """Test setting an invalid solver type."""

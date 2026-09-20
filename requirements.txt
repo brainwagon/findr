@@ -7,3 +7,8 @@ scipy
 pyephem
 requests
 astropy
+# USB/laptop camera capture. On Raspberry Pi OS, apt's python3-opencv already
+# provides cv2 (the venv uses --system-site-packages), so skip the pip wheel
+# there and only install the cross-platform enumerator.
+opencv-python-headless; platform_machine != "aarch64"
+cv2-enumerate-cameras

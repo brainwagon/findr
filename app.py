@@ -22,8 +22,8 @@ import camera as camera_module
 import power
 from catalog import load_catalog
 from solve import (
-    CameraImageSource,
     ImageSourceError,
+    PreviewFrameSource,
     SolveOutcome,
     SolveStore,
     TestImageSource,
@@ -39,14 +39,15 @@ EXPOSURE_TIMES = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 10000
 class AppState:
     """The adapters and mutable state behind one running findr app."""
 
-    def __init__(self, camera, sensor, observer, catalog, solver):
-        self.camera = camera
+    def __init__(self, cameras, sensor, observer, catalog, solver):
+        self.cameras = cameras
         self.sensor = sensor
         self.observer = observer
         self.catalog = catalog
         self.solver = solver
         self.solve_store = SolveStore()
         self.test_mode = False
+        self.boundaries = True
         self.is_paused = False
         self.latest_frame_bytes = None
         self.current_fps = 0.0
@@ -56,11 +57,8 @@ class AppState:
         self.solve_completed_count = 0
 
     def set_controls(self, controls):
-        """Set only the controls the camera actually exposes."""
-        available = self.camera.camera_controls
-        safe = {k: v for k, v in controls.items() if k in available}
-        if safe:
-            self.camera.set_controls(safe)
+        """Set the controls; the camera clamps them to its own ranges."""
+        self.cameras.set_controls(controls)
 
     def capture_and_process_frames(self):
         """Continuously capture frames, track FPS, and keep the latest frame."""
@@ -69,9 +67,7 @@ class AppState:
                 time.sleep(0.1)
                 continue
             try:
-                buffer = io.BytesIO()
-                self.camera.capture_file(buffer, name='lores', format='jpeg')
-                self.latest_frame_bytes = buffer.getvalue()
+                self.latest_frame_bytes = self.cameras.capture_preview()
 
                 self.frame_count += 1
                 current_time = time.time()
@@ -101,7 +97,7 @@ class AppState:
 
             source = (
                 TestImageSource() if self.test_mode
-                else CameraImageSource(self.camera)
+                else PreviewFrameSource(lambda: self.latest_frame_bytes)
             )
             try:
                 image = source.acquire()
@@ -111,7 +107,8 @@ class AppState:
 
             try:
                 outcome = run_solve(
-                    image, self.solver, self.observer, self.catalog
+                    image, self.solver, self.observer, self.catalog,
+                    boundaries=self.boundaries,
                 )
             except Exception as e:
                 logger.error("Error in solve_plate: %s", e)
@@ -154,16 +151,18 @@ def _gen_frames(state):
         time.sleep(0.05)
 
 
-def create_app(camera, sensor, observer, catalog, solver):
+def create_app(cameras, sensor, observer, catalog, solver):
     """Build the Flask app for the given hardware and reference data."""
-    state = AppState(camera, sensor, observer, catalog, solver)
+    state = AppState(cameras, sensor, observer, catalog, solver)
     app = Flask(__name__)
     app.config['STATE'] = state
 
     @app.route('/')
     def index():
-        properties = camera.camera_properties
-        sensor_width, sensor_height = camera_module.STILL_CONFIGURATION["main"]["size"]
+        properties = cameras.properties
+        sensor_width, sensor_height = properties.get(
+            'PixelArraySize', (1456, 1088)
+        )
         try:
             exposure_index = EXPOSURE_TIMES.index(10000)
         except ValueError:
@@ -245,9 +244,36 @@ def create_app(camera, sensor, observer, catalog, solver):
 
     @app.route('/snapshot')
     def snapshot():
-        buffer = io.BytesIO()
-        camera.capture_file(buffer, name='main', format='jpeg')
-        return Response(buffer.getvalue(), mimetype='image/jpeg')
+        return Response(cameras.capture_still(), mimetype='image/jpeg')
+
+    @app.route('/cameras')
+    def cameras_info():
+        return jsonify({
+            'current': state.cameras.get_current_camera_id(),
+            'available': [
+                {'id': descriptor.id, 'label': descriptor.label}
+                for descriptor in state.cameras.available_cameras()
+            ],
+        })
+
+    @app.route('/set_camera', methods=['POST'])
+    def set_camera():
+        data = request.get_json()
+        camera_id = data.get('camera')
+        if not camera_id:
+            return jsonify({'error': 'No camera specified'}), 400
+        try:
+            state.cameras.set_camera(camera_id)
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        # Drop the previous camera's frame so the preview cannot show it.
+        state.latest_frame_bytes = None
+        return jsonify({
+            'status': 'success',
+            'current': state.cameras.get_current_camera_id(),
+        })
 
     @app.route('/solved_field.jpg')
     def solved_field():
@@ -306,6 +332,11 @@ def create_app(camera, sensor, observer, catalog, solver):
         state.test_mode = request.json.get('test_mode', False)
         return "", 204
 
+    @app.route('/set_boundaries', methods=['POST'])
+    def set_boundaries():
+        state.boundaries = request.json.get('boundaries', True)
+        return "", 204
+
     @app.route('/get_solver')
     def get_solver_info():
         return jsonify({
@@ -343,7 +374,9 @@ def _make_observer(config_path='location.ini'):
 
 def main():
     """Assemble the real adapters and run the server."""
-    camera = camera_module.open_camera()
+    cameras = camera_module.open_camera_manager(
+        os.environ.get("FINDR_CAMERA")
+    )
 
     sensor = power.open_sensor(1)
     if sensor:
@@ -352,12 +385,12 @@ def main():
         print("I2C bus not found or smbus2 not installed. INA219 sensor disabled.")
 
     app = create_app(
-        camera, sensor, _make_observer(), load_catalog(), get_solver()
+        cameras, sensor, _make_observer(), load_catalog(), get_solver()
     )
     app.config['STATE'].start_background()
 
     def cleanup():
-        camera.close()
+        cameras.close()
         if sensor:
             sensor.bus.close()
         print("Camera and I2C bus closed.")

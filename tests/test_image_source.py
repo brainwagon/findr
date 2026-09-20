@@ -1,3 +1,4 @@
+import io
 import os
 import random
 import tempfile
@@ -5,7 +6,7 @@ import unittest
 
 from PIL import Image
 
-from solve import CameraImageSource, ImageSourceError, TestImageSource
+from solve import ImageSourceError, PreviewFrameSource, TestImageSource
 
 
 class TestTestImageSource(unittest.TestCase):
@@ -46,22 +47,32 @@ class TestTestImageSource(unittest.TestCase):
             TestImageSource(os.path.join(self.directory, "nope")).acquire()
 
 
-class FakeCamera:
-    def __init__(self, image):
-        self._image = image
-
-    def capture_file(self, buffer, name=None, format="jpeg"):
-        self._image.save(buffer, format=format)
+def jpeg_bytes(size=(16, 12)):
+    buffer = io.BytesIO()
+    Image.new("RGB", size, "grey").save(buffer, format="jpeg")
+    return buffer.getvalue()
 
 
-class TestCameraImageSource(unittest.TestCase):
-    def test_acquires_from_camera(self):
-        source = CameraImageSource(
-            FakeCamera(Image.new("RGB", (16, 12), "grey"))
-        )
+class TestPreviewFrameSource(unittest.TestCase):
+    def test_acquires_the_latest_frame(self):
+        source = PreviewFrameSource(lambda: jpeg_bytes())
         image = source.acquire()
         self.assertIsInstance(image, Image.Image)
         self.assertEqual(image.size, (16, 12))
+
+    def test_waits_for_the_first_frame(self):
+        frames = [None, None, jpeg_bytes()]
+        source = PreviewFrameSource(
+            lambda: frames.pop(0), timeout=1.0, interval=0.01
+        )
+        self.assertIsInstance(source.acquire(), Image.Image)
+
+    def test_raises_when_no_frame_arrives(self):
+        source = PreviewFrameSource(
+            lambda: None, timeout=0.05, interval=0.01
+        )
+        with self.assertRaises(ImageSourceError):
+            source.acquire()
 
 
 if __name__ == "__main__":

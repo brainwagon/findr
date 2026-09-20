@@ -1,3 +1,4 @@
+import io
 import unittest
 
 import ephem
@@ -5,6 +6,8 @@ from PIL import Image
 
 import app as app_module
 from app import create_app
+from camera import CameraDescriptor
+from camera_manager import CameraManager
 from catalog import Catalog
 from solve import SolveOutcome
 
@@ -16,33 +19,29 @@ class FakeCamera:
         self._controls = {}
 
     @property
-    def camera_properties(self):
+    def properties(self):
         return {"Model": "fake", "PixelArraySize": (640, 480)}
 
     @property
-    def camera_controls(self):
+    def controls(self):
         return {
             "AnalogueGain": (1.0, 100.0, 1.0),
             "ExposureTime": (1, 1000000, 10000),
         }
 
-    def create_still_configuration(self, **kwargs):
-        return {}
+    def capture_preview(self):
+        buffer = io.BytesIO()
+        Image.new("RGB", (8, 8), "grey").save(buffer, format="jpeg")
+        return buffer.getvalue()
 
-    def configure(self, config):
-        pass
-
-    def start(self):
-        pass
-
-    def close(self):
-        pass
-
-    def capture_file(self, buffer, name=None, format="jpeg"):
-        Image.new("RGB", (8, 8), "grey").save(buffer, format=format)
+    def capture_still(self):
+        return self.capture_preview()
 
     def set_controls(self, controls):
         self._controls.update(controls)
+
+    def close(self):
+        pass
 
 
 class FakeSolverManager:
@@ -66,11 +65,27 @@ class FakeSolverManager:
         return None
 
 
+def make_camera_manager():
+    descriptors = [
+        CameraDescriptor("fake", "Fake camera", "fake"),
+        CameraDescriptor("other", "Other camera", "other"),
+        CameraDescriptor("dummy", "Test camera (dummy)", "dummy"),
+    ]
+    return CameraManager(
+        descriptors=descriptors,
+        camera=FakeCamera(),
+        current_id="fake",
+        factory=lambda descriptor: FakeCamera(),
+    )
+
+
 def make_app():
     observer = ephem.Observer()
     observer.lat = "0"
     observer.lon = "0"
-    app = create_app(FakeCamera(), None, observer, Catalog(), FakeSolverManager())
+    app = create_app(
+        make_camera_manager(), None, observer, Catalog(), FakeSolverManager()
+    )
     app.config['TESTING'] = True
     return app
 
@@ -109,10 +124,39 @@ class TestAppRoutes(unittest.TestCase):
         response = self.client.post('/set_solver', json={'solver': 'nope'})
         self.assertEqual(response.status_code, 500)
 
+    def test_get_cameras(self):
+        data = self.client.get('/cameras').get_json()
+        self.assertEqual(data['current'], 'fake')
+        self.assertEqual(
+            [camera['id'] for camera in data['available']],
+            ['fake', 'other', 'dummy'],
+        )
+
+    def test_set_camera(self):
+        response = self.client.post('/set_camera', json={'camera': 'other'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['current'], 'other')
+        self.assertEqual(
+            self.app.config['STATE'].cameras.get_current_camera_id(), 'other'
+        )
+
+    def test_set_camera_rejects_unknown(self):
+        response = self.client.post('/set_camera', json={'camera': 'nope'})
+        self.assertEqual(response.status_code, 400)
+
+    def test_set_camera_requires_a_camera(self):
+        response = self.client.post('/set_camera', json={})
+        self.assertEqual(response.status_code, 400)
+
     def test_set_test_mode(self):
         response = self.client.post('/set_test_mode', json={'test_mode': True})
         self.assertEqual(response.status_code, 204)
         self.assertTrue(self.app.config['STATE'].test_mode)
+
+    def test_set_boundaries(self):
+        response = self.client.post('/set_boundaries', json={'boundaries': False})
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(self.app.config['STATE'].boundaries)
 
     def test_toggle_pause(self):
         response = self.client.post('/toggle_pause')

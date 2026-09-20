@@ -20,9 +20,23 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(BASE_DIR, 'cedar-solve'))
 sys.path.insert(0, os.path.join(BASE_DIR, 'tetra3-repo'))
 
+# olive-solve's FusedSolver takes a path to the .npz database rather than the
+# bare name the Python backends accept. Reuse the cedar-solve database it was
+# ported from.
+OLIVE_DATABASE = os.path.join(
+    BASE_DIR, 'cedar-solve', 'cedar_solve', 'data', 'default_database.npz'
+)
+
 # Both backends expose the same API under distinct package names.
 import tetra3
 import cedar_solve
+
+# olive-solve is a Rust extension built from the olive-solve submodule (see the
+# `olive` target in the Makefile), so it is only registered when importable.
+try:
+    import olive_solve
+except ImportError:  # pragma: no cover - depends on the local build
+    olive_solve = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,9 +47,10 @@ logger = logging.getLogger(__name__)
 class SolverBackend:
     """A star-pattern matching library the finder can solve with.
 
-    `tetra3` and `cedar-solve` expose the same API, so a backend is a
-    descriptor rather than an adapter: a key, a label, and the module that
-    holds the `Tetra3` class.
+    `tetra3` and `cedar-solve` expose the same API, so for them a backend is a
+    descriptor rather than an adapter: a key, a label, and the module that holds
+    the `Tetra3` class. `olive-solve` exposes a different API and is driven by
+    `OliveSolver`.
     """
 
     key: str
@@ -131,6 +146,88 @@ class LibrarySolver(BaseSolver):
             return None
 
 
+class OliveSolver(BaseSolver):
+    """One implementation driving the olive-solve Rust FusedSolver backend.
+
+    olive-solve exposes `FusedSolver(database_path)`, whose `solve_from_image`
+    takes a 2-D float32 NumPy array rather than a PIL image, so this adapter
+    converts the frame and normalises the returned dict to a SolverResult.
+    """
+
+    def __init__(self, backend, database_path=OLIVE_DATABASE):
+        """Initialize the backend's solver with its star database."""
+        self.backend = backend
+        logger.info(
+            "Initializing %s with database: %s...", backend.label, database_path
+        )
+        try:
+            self.t3 = backend.module.FusedSolver(database_path)
+        except Exception as e:
+            logger.error("Failed to initialize %s: %s", backend.label, e)
+            raise
+        logger.info("%s initialized successfully.", backend.label)
+
+    def solve(self, image_path_or_obj):
+        """Solve an image and normalise the backend's result."""
+        try:
+            if isinstance(image_path_or_obj, str):
+                image = Image.open(image_path_or_obj)
+            else:
+                image = image_path_or_obj
+            array = np.asarray(image.convert('L'), dtype=np.float32)
+
+            logger.info("Attempting to solve image with %s...", self.backend.label)
+            solution = self.t3.solve_from_image(array, return_matches=True)
+
+            if solution.get('RA') is None:
+                logger.warning("Plate solve failed to find a solution.")
+                return None
+
+            logger.info("Plate solve successful.")
+            # olive-solve returns each matched catalogue id as a one-element
+            # list; the overlay expects a flat id like the Python backends.
+            matched_cat_ids = [
+                cat_id[0] if isinstance(cat_id, (list, tuple, np.ndarray))
+                else cat_id
+                for cat_id in solution.get('matched_catID', [])
+            ]
+            return SolverResult(
+                ra=solution['RA'],
+                dec=solution['Dec'],
+                roll=solution['Roll'],
+                fov=solution['FOV'],
+                matched_stars_count=solution.get('Matches', 0),
+                matched_cat_ids=matched_cat_ids,
+                matched_centroids=solution.get('matched_centroids', []),
+                matched_stars=solution.get('matched_stars', []),
+                solver_type=self.backend.key,
+            )
+        except Exception as e:
+            logger.error(
+                "Error during plate solving with %s: %s", self.backend.label, e
+            )
+            return None
+
+
+# The Solver class that drives each backend. The Python libraries share the
+# LibrarySolver; olive-solve needs its own adapter.
+_SOLVER_CLASSES = {
+    'tetra3': LibrarySolver,
+    'cedar-solve': LibrarySolver,
+}
+
+if olive_solve is not None:
+    BACKENDS['olive-solve'] = SolverBackend(
+        'olive-solve', 'Olive-Solve', olive_solve
+    )
+    _SOLVER_CLASSES['olive-solve'] = OliveSolver
+
+
+def make_solver(key):
+    """Build the Solver registered for a backend key."""
+    return _SOLVER_CLASSES[key](BACKENDS[key])
+
+
 class SolverManager:
     """Selects the active Solver backend and delegates solves to it."""
 
@@ -139,10 +236,10 @@ class SolverManager:
         self._current_solver_type = None
         self._current_solver_instance = None
 
-        # Register the available backends, each behind a LibrarySolver.
+        # Register the available backends behind the Solver that drives them.
         for backend in BACKENDS.values():
             self.register_solver(
-                backend.key, lambda b=backend: LibrarySolver(b)
+                backend.key, lambda k=backend.key: make_solver(k)
             )
 
         try:
