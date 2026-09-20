@@ -51,7 +51,6 @@ dtparam=power_force_3v3_pwm=1
 ├── tetra3-repo/            # Git submodule: patched tetra3 plate solver
 ├── conductor/              # Project planning and track documents
 ├── docs/                   # Research and integration notes
-├── patches/                # Patches applied to the bundled solvers
 ├── tests/                  # Unit tests for the solver modules
 ├── test-images/            # Sample images used by Test Mode
 ├── static/                 # CSS and JavaScript assets
@@ -72,6 +71,16 @@ If you already cloned without `--recursive`, initialize the submodules:
 
 ```bash
 git submodule update --init --recursive
+```
+
+The solver star databases are stored with [Git LFS](https://git-lfs.com/). Install
+`git-lfs` and run `git lfs install` **before** cloning, or the submodules will check
+out pointer files instead of the databases and neither backend will load. If you
+already cloned without it, run `git lfs install && git lfs pull` in each submodule.
+
+```bash
+sudo apt install git-lfs
+git lfs install
 ```
 
 ### 2. Environment Setup
