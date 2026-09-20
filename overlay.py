@@ -6,6 +6,7 @@ image. Drawing is best-effort: failures are logged, never raised, because an
 Overlay is cosmetic and must not fail a solve.
 """
 
+import itertools
 import logging
 
 import numpy as np
@@ -17,6 +18,12 @@ from astropy.wcs.utils import fit_wcs_from_points
 from catalog import decode_simbad_greek
 
 logger = logging.getLogger(__name__)
+
+# Labelling every matched star and fitting the boundary WCS from all of them
+# costs more than it shows: a solve can match hundreds of stars. Cap the labels
+# and fit the projection from a small bright subset instead.
+MAX_LABELLED_STARS = 30
+MAX_WCS_POINTS = 8
 
 
 def render(image, result, catalog, constellation, boundaries=True):
@@ -61,7 +68,8 @@ def draw_boundaries(image, result, constellation, boundaries):
 
 def _draw_star_labels(draw, result, catalog):
     """Label each matched star with its catalogue name."""
-    for star_id, point in zip(result.matched_cat_ids, result.matched_centroids):
+    labels = zip(result.matched_cat_ids, result.matched_centroids)
+    for star_id, point in itertools.islice(labels, MAX_LABELLED_STARS):
         try:
             position = (int(point[1]) + 8, int(point[0]) - 8)
             label = decode_simbad_greek(
@@ -82,14 +90,15 @@ def _draw_boundaries(draw, result, constellation, boundaries):
     if len(matched_stars) == 0 or len(matched_centroids) == 0:
         return
 
-    star_xy = (matched_centroids[:, 1], matched_centroids[:, 0])
+    subset = min(len(matched_stars), MAX_WCS_POINTS)
+    star_xy = (matched_centroids[:subset, 1], matched_centroids[:subset, 0])
     world_coords = SkyCoord(
-        ra=np.array(matched_stars[:, 0]) * u.deg,
-        dec=np.array(matched_stars[:, 1]) * u.deg,
+        ra=np.array(matched_stars[:subset, 0]) * u.deg,
+        dec=np.array(matched_stars[:subset, 1]) * u.deg,
         frame="icrs",
     )
     wcs = fit_wcs_from_points(
-        star_xy, world_coords, projection="TAN", sip_degree=2
+        star_xy, world_coords, projection="TAN", sip_degree=0
     )
 
     name = (constellation or "").upper()

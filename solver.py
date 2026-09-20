@@ -84,11 +84,12 @@ class BaseSolver(ABC):
     """The interface every Solver backend implementation satisfies."""
 
     @abstractmethod
-    def solve(self, image_path_or_obj) -> Optional[SolverResult]:
+    def solve(self, image_path_or_obj, **kwargs) -> Optional[SolverResult]:
         """Solve the plate for a given image.
 
         Args:
             image_path_or_obj: Path to an image file or a PIL Image object.
+            **kwargs: Backend-specific extraction options (e.g. max_returned).
 
         Returns:
             A SolverResult, or None if no solution was found.
@@ -112,7 +113,7 @@ class LibrarySolver(BaseSolver):
             raise
         logger.info("%s initialized successfully.", backend.label)
 
-    def solve(self, image_path_or_obj):
+    def solve(self, image_path_or_obj, **kwargs):
         """Solve an image and normalise the backend's result."""
         try:
             if isinstance(image_path_or_obj, str):
@@ -121,7 +122,9 @@ class LibrarySolver(BaseSolver):
                 image = image_path_or_obj
 
             logger.info("Attempting to solve image with %s...", self.backend.label)
-            solution = self.t3.solve_from_image(image, return_matches=True)
+            solution = self.t3.solve_from_image(
+                image, return_matches=True, **kwargs
+            )
 
             if solution['RA'] is None:
                 logger.warning("Plate solve failed to find a solution.")
@@ -167,8 +170,12 @@ class OliveSolver(BaseSolver):
             raise
         logger.info("%s initialized successfully.", backend.label)
 
-    def solve(self, image_path_or_obj):
-        """Solve an image and normalise the backend's result."""
+    def solve(self, image_path_or_obj, **kwargs):
+        """Solve an image and normalise the backend's result.
+
+        olive-solve's `solve_from_image` does not take the Python backends'
+        extraction options, so any `kwargs` (e.g. `max_returned`) are ignored.
+        """
         try:
             if isinstance(image_path_or_obj, str):
                 image = Image.open(image_path_or_obj)
@@ -284,10 +291,10 @@ class SolverManager:
         """Get the current active solver instance."""
         return self._current_solver_instance
 
-    def solve(self, image_path_or_obj):
+    def solve(self, image_path_or_obj, **kwargs):
         """Delegate solving to the current active solver."""
         if self._current_solver_instance:
-            return self._current_solver_instance.solve(image_path_or_obj)
+            return self._current_solver_instance.solve(image_path_or_obj, **kwargs)
         logger.error("No active solver instance to handle solve request.")
         return None
 

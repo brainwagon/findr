@@ -164,7 +164,7 @@ def format_radec_fixed_width(angle_obj, is_ra=True, total_width=10, decimal_plac
 
 
 def run_solve(image, solver, observer, catalog, clock=ephem.now,
-              boundaries=True):
+              boundaries=True, max_returned=None):
     """Solve one image and return a SolveOutcome.
 
     Args:
@@ -174,12 +174,15 @@ def run_solve(image, solver, observer, catalog, clock=ephem.now,
         catalog: a Catalog used to label stars and draw boundaries.
         clock: a callable returning the observation time; injected for tests.
         boundaries: when False, skip the constellation-boundary annotation.
+        max_returned: optional cap on detected stars, passed to the backend;
+            None leaves the backend's own default.
 
     Returns:
         A SolveOutcome; `error` is set when no solution was found.
     """
     try:
-        result = solver.solve(image)
+        options = {} if max_returned is None else {"max_returned": max_returned}
+        result = solver.solve(image, **options)
     except Exception as e:
         logger.error("Solver raised during solve: %s", e)
         return SolveOutcome(error=str(e), image=image)

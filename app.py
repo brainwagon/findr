@@ -35,6 +35,14 @@ logger = logging.getLogger(__name__)
 
 EXPOSURE_TIMES = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]
 
+# Cap the stars the backend detects: enough to solve and label, fewer to match
+# than a full-frame centroid list.
+SOLVE_MAX_RETURNED = 15
+
+# A preview frame older than this is stale (the capture loop has stalled); the
+# solve is skipped rather than reporting a position for an out-of-date frame.
+STALE_FRAME_SECONDS = 5.0
+
 
 class AppState:
     """The adapters and mutable state behind one running findr app."""
@@ -50,11 +58,13 @@ class AppState:
         self.boundaries = True
         self.is_paused = False
         self.latest_frame_bytes = None
+        self.latest_frame_time = 0.0
         self.current_fps = 0.0
         self.last_frame_time = time.time()
         self.frame_count = 0
         self.solve_fps = 0.0
         self.solve_completed_count = 0
+        self.solve_request_event = threading.Event()
 
     def set_controls(self, controls):
         """Set the controls; the camera clamps them to its own ranges."""
@@ -68,6 +78,7 @@ class AppState:
                 continue
             try:
                 self.latest_frame_bytes = self.cameras.capture_preview()
+                self.latest_frame_time = time.time()
 
                 self.frame_count += 1
                 current_time = time.time()
@@ -95,6 +106,14 @@ class AppState:
                 self.solve_store.set_status("paused")
                 return
 
+            if not self.test_mode and (
+                self.latest_frame_time == 0.0
+                or time.time() - self.latest_frame_time > STALE_FRAME_SECONDS
+            ):
+                logger.warning("Solve skipped: preview frame is stale.")
+                self.solve_store.finish(SolveOutcome(error="Stale frame"))
+                return
+
             source = (
                 TestImageSource() if self.test_mode
                 else PreviewFrameSource(lambda: self.latest_frame_bytes)
@@ -109,6 +128,7 @@ class AppState:
                 outcome = run_solve(
                     image, self.solver, self.observer, self.catalog,
                     boundaries=self.boundaries,
+                    max_returned=SOLVE_MAX_RETURNED,
                 )
             except Exception as e:
                 logger.error("Error in solve_plate: %s", e)
@@ -123,13 +143,28 @@ class AppState:
             self.solve_completed_count += 1
 
     def start_solve(self):
-        """Begin a solve in a background thread."""
+        """Request a solve; the persistent worker performs it."""
         self.solve_store.begin()
-        threading.Thread(target=self.solve_plate).start()
+        self.solve_request_event.set()
+
+    def solve_worker(self):
+        """Solve on request, one at a time, for the life of the app.
+
+        A single long-lived thread replaces a thread per request, so a burst of
+        requests cannot pile up overlapping solves.
+        """
+        while True:
+            self.solve_request_event.wait()
+            self.solve_request_event.clear()
+            self.solve_plate()
 
     def start_background(self):
-        """Start the capture and solve-FPS daemon threads."""
-        for target in (self.capture_and_process_frames, self.calculate_solve_fps):
+        """Start the capture, solve-FPS and solve-worker daemon threads."""
+        for target in (
+            self.capture_and_process_frames,
+            self.calculate_solve_fps,
+            self.solve_worker,
+        ):
             threading.Thread(target=target, daemon=True).start()
 
 
@@ -138,7 +173,7 @@ def _encode_jpeg(image):
     if image is None:
         return None
     buffer = io.BytesIO()
-    image.save(buffer, format="JPEG")
+    image.save(buffer, format="JPEG", quality=80)
     return buffer.getvalue()
 
 
