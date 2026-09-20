@@ -40,6 +40,7 @@ dtparam=power_force_3v3_pwm=1
 ├── camera_dummy.py         # Dummy camera interface for non-Pi development
 ├── power.py                # INA219 driver, state of charge and PowerReading
 ├── ina219_reader.py        # Standalone INA219 power monitor utility
+├── benchmark.py            # Times each Solver backend over the test frames
 ├── requirements.txt        # Python dependencies (excluding system libraries)
 ├── REQUIREMENTS.md         # Original project requirements document
 ├── findr.service           # systemd unit for auto-start on boot
@@ -149,6 +150,38 @@ The application is configured to start automatically on boot using **systemd**.
 - The solver is modular: `cedar-solve` is the default, with `tetra3` available as a fallback and selectable from the UI. Both are bundled as submodules and loaded from their local repositories, so ensure the submodules are initialized.
 - Each solver loads a valid star database (it will attempt to load the default one if available).
 - Use **Test Mode** in the web interface to cycle through pre-loaded images in the `test-images/` directory to verify solver performance without live hardware.
+
+## Solver Benchmark
+
+`benchmark.py` times each Solver backend over every frame in `test-images/`:
+
+```bash
+python3 benchmark.py            # 3 solves per frame, after a warmup solve
+python3 benchmark.py --repeat 5
+```
+
+Per-frame times are means in milliseconds; **Database load** is the one-time cost
+of loading the backend's star database.
+
+**Machine:** Intel(R) Core(TM) i7-14700F · 28 threads · 23.5 GiB RAM · Ubuntu 22.04.5 LTS (WSL2) · Python 3.10.12
+
+| Frame | tetra3 (ms) | cedar-solve (ms) |
+| --- | ---: | ---: |
+| `lores_jpeg_2025-11-07T01_59_03.175Z.jpg` | 19.7 | 25.9 |
+| `lores_jpeg_2025-11-07T02_23_17.329Z.jpg` | 11.1 | 19.2 |
+| `lores_jpeg_2025-11-07T02_53_07.536Z.jpg` | 10.2 | 13.7 |
+| `lores_jpeg_2025-11-07T02_59_58.735Z.jpg` | 10.2 | 12.3 |
+| `lores_jpeg_2025-11-07T03_03_01.032Z.jpg` | 10.2 | 13.0 |
+| `lores_jpeg_2025-11-07T03_03_46.674Z.jpg` | 9.5 | 12.4 |
+| `lores_jpeg_2025-11-07T03_09_00.164Z.jpg` | 12.3 | 14.7 |
+| `lores_jpeg_2025-11-07T03_45_55.786Z.jpg` | 72.1 | 176.2 |
+| **Total** | **155** | **287** |
+| **Mean** | **19.4** | **35.9** |
+| **Database load** | 0.38 s | 0.14 s |
+| **Frames solved** | 7/8 | 8/8 |
+
+The last frame is the hardest: `tetra3` fails to solve it (72 ms to give up),
+while `cedar-solve` solves it in 176 ms.
 
 ## Running Tests
 Unit tests for the solver abstraction live in `tests/`:
