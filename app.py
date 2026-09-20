@@ -159,6 +159,7 @@ def create_app(camera, sensor, observer, catalog, solver):
     @app.route('/')
     def index():
         properties = camera.camera_properties
+        sensor_width, sensor_height = camera_module.STILL_CONFIGURATION["main"]["size"]
         try:
             exposure_index = EXPOSURE_TIMES.index(10000)
         except ValueError:
@@ -173,6 +174,8 @@ def create_app(camera, sensor, observer, catalog, solver):
             brightness=50,
             contrast=50,
             sharpness=50,
+            sensor_width=sensor_width,
+            sensor_height=sensor_height,
             test_mode=state.test_mode,
         )
 
