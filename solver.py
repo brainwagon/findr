@@ -14,13 +14,14 @@ import numpy as np
 # the vendored library.
 np.math = math
 
-# Add local library paths to sys.path
+# Add the vendored libraries to sys.path, at the front so the bundled backends
+# win over any identically-named package installed in the environment.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(BASE_DIR, 'tetra3-repo'))
-sys.path.append(os.path.join(BASE_DIR, 'cedar-solve'))
+sys.path.insert(0, os.path.join(BASE_DIR, 'cedar-solve'))
+sys.path.insert(0, os.path.join(BASE_DIR, 'tetra3-repo'))
 
-# Import the renamed libraries
-import tetra3_base
+# Both backends expose the same API under distinct package names.
+import tetra3
 import cedar_solve
 
 # Configure logging
@@ -59,7 +60,7 @@ class SolverResult:
 
 # The available Solver backends, keyed by the name the UI uses.
 BACKENDS = {
-    'tetra3': SolverBackend('tetra3', 'Tetra3', tetra3_base),
+    'tetra3': SolverBackend('tetra3', 'Tetra3', tetra3),
     'cedar-solve': SolverBackend('cedar-solve', 'Cedar-Solve', cedar_solve),
 }
 
