@@ -1,0 +1,282 @@
+body {
+    font-family: 'Raleway', 'HelveticaNeue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.container {
+    display: block;
+}
+
+.top-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 2em;
+}
+
+.image-section {
+    flex: 1;
+}
+
+.controls-section {
+    flex: 1;
+}
+
+.footer-info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1em;
+    margin-bottom: 1em;
+}
+
+.video-container {
+    width: 640px ;
+    height: 480px ;
+    position: relative; /* Needed for absolute positioning of children */
+}
+
+.live-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(255, 0, 0, 0.7); /* Red with some transparency */
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    z-index: 10; /* Ensure it's above the image */
+    font-size: 1.2em;
+}
+
+.fps-overlay {                                                        
+
+    position: absolute;                                               
+
+    top: 10px;                                                        
+
+    left: 10px;                                                       
+
+    background-color: rgba(0, 0, 0, 0.7); /* Dark background with some
+
+ transparency */                                                       
+
+    color: white;                                                     
+
+    padding: 5px 10px;                                                
+
+    border-radius: 5px;                                               
+
+    font-weight: bold;                                                
+
+    z-index: 10; /* Ensure it's above the image */                    
+
+    font-size: 1.2em;                                                 
+
+}                                                                     
+
+
+
+.solve-success {
+
+    background-color: rgba(0, 128, 0, 0.7); /* Green */
+
+}
+
+
+
+.solve-fail {
+
+    background-color: rgba(255, 0, 0, 0.7); /* Red */
+
+}
+
+                                                                      
+
+ .radec-container {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 40px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.radec-container table {
+    width: auto; /* Allow table to shrink to content */
+    margin-left: auto; /* Center the table */
+    margin-right: auto; /* Center the table */
+    border-collapse: collapse; /* Remove space between cell borders */
+}
+
+.radec-container table td {
+    border: none; /* Remove borders from cells */
+    padding: 0 10px; /* Add some padding to cells */
+}
+
+.radec-container .label {
+    text-align: right;
+    padding-right: 10px;
+}
+
+.radec-container #ra-display,
+.radec-container #dec-display {
+    text-align: left;
+}
+
+.video-container img {                                                
+
+     display: block;                                                   
+
+     max-width: 100%; /* Ensure image scales within container */
+    height: auto; /* Maintain aspect ratio */
+}
+
+.solver-container {
+    /* No longer needs position: relative here, as solved-image-wrapper will handle it */
+}
+
+.solved-image-wrapper {
+    position: relative; /* Needed for absolute positioning of children */
+    width: 640px; /* Match image width */
+    height: 480px; /* Match image height */
+}
+
+.solution-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(255, 0, 0, 0.7); /* Red with some transparency */
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    z-index: 10; /* Ensure it's above the image */
+    font-size: 1.2em;
+}
+
+.controls-container {
+    padding: 1em;
+}
+
+.control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5em; /* Make it more compact */
+    gap: 1em; /* Space between label and control */
+}
+
+.control label {
+    flex: 1; /* Label takes 1 part of the space */
+    text-align: left;
+    min-width: 80px; /* Ensure labels have enough space */
+    font-family: 'Raleway', 'HelveticaNeue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.control input[type="range"],
+.control select {
+    flex: 2; /* Control takes 2 parts of the space */
+    width: auto; /* Override 100% width from skeleton or other rules */
+}
+
+.control button {
+    width: 100%;
+}
+
+.valid-fix {
+    color: green;
+}
+
+.pending-fix {
+    color: red;
+}
+
+#solved-image {
+    width: 640px ;
+    height: 480px ;
+}
+
+body.dark-mode {
+    background-color: black;
+    color: red;
+}
+
+body.dark-mode h1 {
+    color: red;
+}
+
+body.dark-mode a {
+    color: red;
+}
+
+body.dark-mode button, 
+body.dark-mode input, 
+body.dark-mode select, 
+body.dark-mode textarea {
+    color: red;
+    background-color: black;
+    border: 1px solid red;
+}
+
+body.dark-mode .video-container,
+body.dark-mode .controls-container,
+body.dark-mode .camera-properties {
+    border: 1px solid #555;
+}
+
+body.dark-mode input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: #333;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+    border: none;
+}
+
+body.dark-mode input[type="range"]:hover {
+    opacity: 1;
+}
+
+body.dark-mode input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #880000;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+body.dark-mode input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #880000;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+body.dark-mode .control button {
+    background-color: red;
+    color: white;
+}
+
+body.dark-mode .control button:disabled {
+    background-color: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+.matched-stars-overlay {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(0, 128, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    z-index: 10;
+    font-size: 1.2em;
+    width: 90px; /* Sufficient for "99 stars" */
+    text-align: center;
+}

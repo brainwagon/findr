@@ -1,0 +1,19 @@
+[Unit]
+Description=findr - Telescope Finder Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=markv
+Group=markv
+SupplementaryGroups=video i2c gpio spi
+WorkingDirectory=/home/markv/findr
+ExecStart=/home/markv/findr/venv/bin/python3 /home/markv/findr/app.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

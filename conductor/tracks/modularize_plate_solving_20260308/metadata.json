@@ -1,0 +1,8 @@
+{
+  "track_id": "modularize_plate_solving_20260308",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-03-08T00:00:00Z",
+  "updated_at": "2026-03-08T00:00:00Z",
+  "description": "Modularize the plate solving system to support both tetra3 and cedar-solve, and provide a control in the web interface to switch between them."
+}
