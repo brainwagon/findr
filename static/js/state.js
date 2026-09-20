@@ -2,6 +2,7 @@
 const values = {
   currentVideoMode: 'live',
   isSolving: false,
+  showOverlay: true,
 };
 
 const listeners = new Set();

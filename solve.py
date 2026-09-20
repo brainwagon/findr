@@ -48,6 +48,7 @@ class SolveOutcome:
     az: Optional[float] = None
     constellation: str = ""
     image: Optional[Image.Image] = None
+    raw_image: Optional[Image.Image] = None
     error: Optional[str] = None
 
     @property
@@ -191,7 +192,10 @@ def run_solve(image, solver, observer, catalog, clock=ephem.now):
         (math.radians(ra_val), math.radians(dec_val))
     )[0]
 
-    outcome = SolveOutcome(
+    raw_image = image.copy()
+    overlay.render(image, result, catalog, constellation)
+
+    return SolveOutcome(
         ra=ra_val,
         dec=dec_val,
         roll=roll_val,
@@ -207,10 +211,8 @@ def run_solve(image, solver, observer, catalog, clock=ephem.now):
         az=math.degrees(target.az),
         constellation=constellation,
         image=image,
+        raw_image=raw_image,
     )
-
-    overlay.render(image, result, catalog, constellation)
-    return outcome
 
 
 class SolveStore:
@@ -221,6 +223,7 @@ class SolveStore:
         self._status = "idle"
         self._outcome = None
         self._image_bytes = None
+        self._raw_image_bytes = None
 
     def begin(self):
         """Mark a new solve as in progress."""
@@ -233,20 +236,32 @@ class SolveStore:
         with self._lock:
             self._status = status
 
-    def finish(self, outcome, image_bytes=None):
-        """Store a finished outcome and its encoded image."""
+    def finish(self, outcome, image_bytes=None, raw_image_bytes=None):
+        """Store a finished outcome and its encoded images.
+
+        `image_bytes` carries the Overlay; `raw_image_bytes` is the same frame
+        without it. They are stored as a pair so the two never disagree.
+        """
         with self._lock:
             self._outcome = outcome
             self._status = "solved" if outcome.ok else "failed"
             if image_bytes is not None:
                 self._image_bytes = image_bytes
+                self._raw_image_bytes = raw_image_bytes
 
     def snapshot(self):
         """Return (status, outcome) atomically."""
         with self._lock:
             return self._status, self._outcome
 
-    def get_image_bytes(self):
-        """Return the JPEG bytes of the most recent solve, if any."""
+    def get_image_bytes(self, overlay=True):
+        """Return the JPEG bytes of the most recent solve, if any.
+
+        Args:
+            overlay: when False, return the frame without the Overlay drawn,
+                falling back to the overlaid frame when none is available.
+        """
         with self._lock:
-            return self._image_bytes
+            if overlay or self._raw_image_bytes is None:
+                return self._image_bytes
+            return self._raw_image_bytes

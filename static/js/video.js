@@ -16,10 +16,13 @@ export function initVideo() {
   matchedStarsOverlay.style.display = 'none';
 
   function updateFeed() {
-    const base = get('currentVideoMode') === MODE_LIVE
-      ? '/video_feed'
-      : '/solved_field.jpg';
-    videoFeedImg.src = base + '?t=' + new Date().getTime();
+    const solved = get('currentVideoMode') !== MODE_LIVE;
+    const base = solved ? '/solved_field.jpg' : '/video_feed';
+    let url = base + '?t=' + new Date().getTime();
+    if (solved && !get('showOverlay')) {
+      url += '&overlay=0';
+    }
+    videoFeedImg.src = url;
   }
 
   function updateOverlay() {
@@ -31,6 +34,10 @@ export function initVideo() {
   });
 
   subscribe((name, value) => {
+    if (name === 'showOverlay') {
+      updateFeed();
+      return;
+    }
     if (name !== 'currentVideoMode') return;
     updateOverlay();
     updateFeed();

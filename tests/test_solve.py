@@ -4,7 +4,12 @@ import ephem
 from PIL import Image, ImageFont
 
 from catalog import Catalog
-from solve import format_radec_fixed_width, run_solve
+from solve import (
+    SolveOutcome,
+    SolveStore,
+    format_radec_fixed_width,
+    run_solve,
+)
 from solver import BaseSolver, SolverResult
 
 
@@ -68,6 +73,8 @@ class TestRunSolve(unittest.TestCase):
         self.assertIsNotNone(outcome.az)
         self.assertTrue(outcome.constellation)
         self.assertIsNotNone(outcome.image)
+        self.assertIsNotNone(outcome.raw_image)
+        self.assertIsNot(outcome.raw_image, outcome.image)
 
     def test_failure_sets_error_and_keeps_image(self):
         image = black_image()
@@ -101,6 +108,19 @@ class TestRunSolve(unittest.TestCase):
             "alt", "az", "constellation", "matched_stars_count",
         ):
             self.assertIn(key, payload)
+
+
+class TestSolveStore(unittest.TestCase):
+    def test_overlay_toggle_selects_the_matching_bytes(self):
+        store = SolveStore()
+        store.finish(SolveOutcome(ra=1.0, dec=2.0), b"overlaid", b"raw")
+        self.assertEqual(store.get_image_bytes(overlay=True), b"overlaid")
+        self.assertEqual(store.get_image_bytes(overlay=False), b"raw")
+
+    def test_missing_raw_image_falls_back_to_overlaid(self):
+        store = SolveStore()
+        store.finish(SolveOutcome(ra=1.0, dec=2.0), b"overlaid")
+        self.assertEqual(store.get_image_bytes(overlay=False), b"overlaid")
 
 
 class TestFormatRadecFixedWidth(unittest.TestCase):

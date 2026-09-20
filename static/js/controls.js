@@ -1,3 +1,5 @@
+import { set } from './state.js';
+
 const DEFAULT_SENSOR = { sensorWidth: 1456, sensorHeight: 1088 };
 
 export function initControls() {
@@ -12,6 +14,7 @@ export function initControls() {
   const saveSettingsButton = document.getElementById('save_settings_button');
   const zoomSelect = document.getElementById('zoom_select');
   const testModeCheckbox = document.getElementById('test_mode_checkbox');
+  const overlayCheckbox = document.getElementById('overlay_checkbox');
 
   function updateControlValueDisplay() {
     brightnessValueSpan.innerText = brightnessSlider.value;
@@ -96,6 +99,9 @@ export function initControls() {
   contrastSlider.addEventListener('input', sendControls);
   sharpnessSlider.addEventListener('input', sendControls);
   testModeCheckbox.addEventListener('change', sendTestMode);
+  overlayCheckbox.addEventListener('change', () => {
+    set('showOverlay', overlayCheckbox.checked);
+  });
   saveSettingsButton.addEventListener('click', saveSettings);
 
   loadSettings();

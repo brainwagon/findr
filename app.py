@@ -117,7 +117,11 @@ class AppState:
                 logger.error("Error in solve_plate: %s", e)
                 outcome = SolveOutcome(error=str(e), image=image)
 
-            self.solve_store.finish(outcome, _encode_jpeg(outcome.image))
+            self.solve_store.finish(
+                outcome,
+                _encode_jpeg(outcome.image),
+                _encode_jpeg(outcome.raw_image),
+            )
         finally:
             self.solve_completed_count += 1
 
@@ -247,7 +251,8 @@ def create_app(camera, sensor, observer, catalog, solver):
 
     @app.route('/solved_field.jpg')
     def solved_field():
-        image_bytes = state.solve_store.get_image_bytes()
+        show_overlay = request.args.get('overlay', '1') != '0'
+        image_bytes = state.solve_store.get_image_bytes(show_overlay)
         if image_bytes:
             return Response(image_bytes, mimetype='image/jpeg')
         # Return a black image if no solved image is available

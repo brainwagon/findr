@@ -6,6 +6,7 @@ from PIL import Image
 import app as app_module
 from app import create_app
 from catalog import Catalog
+from solve import SolveOutcome
 
 
 class FakeCamera:
@@ -126,6 +127,16 @@ class TestAppRoutes(unittest.TestCase):
         response = self.client.get('/solved_field.jpg')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, 'image/jpeg')
+
+    def test_solved_field_overlay_param_selects_the_image(self):
+        state = self.app.config['STATE']
+        state.solve_store.finish(
+            SolveOutcome(ra=1.0, dec=2.0), b"overlaid", b"raw"
+        )
+        self.assertEqual(self.client.get('/solved_field.jpg').data, b"overlaid")
+        self.assertEqual(
+            self.client.get('/solved_field.jpg?overlay=0').data, b"raw"
+        )
 
     def test_state_is_per_app(self):
         other = make_app()
