@@ -20,6 +20,13 @@ This project provides a web-based interface for a Raspberry Pi-based telescope f
 - **Portable Camera Support:** Cameras are driven through a backend-neutral interface with adapters for libcamera/picamera2 (Raspberry Pi CSI cameras) and OpenCV (USB webcams and laptop cameras), falling back to a dummy camera on a machine with no camera.
 - **Live Camera Selection:** A dropdown lists the cameras the machine offers (CSI and USB) and switches between them without restarting.
 
+## Hardware
+
+The 3D-printed prototype hardware — enclosure, camera head and dovetail clamp — is
+modelled in Onshape. The current assembly lives in the `findr2` document:
+
+- **Onshape project:** <https://cad.onshape.com/documents/aac97b29bc57f6d0845ce97c/w/6b16a86d7e2782d3bee433d0/e/28e892ec8534f3e90436015f>
+
 ## Hardware Optimization
 
 If you experience horizontal noise lines in your captured images (especially at high gain), it is likely power supply noise on the 3.3V rail. Adding the following line to `/boot/firmware/config.txt` (or `/boot/config.txt`) often resolves this:
