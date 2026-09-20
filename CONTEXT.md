@@ -16,6 +16,11 @@ A concrete star-pattern matching library that performs a Plate solve — current
 `tetra3` and `cedar-solve`. The telescope finder selects one at runtime.
 _Avoid_: "engine", "algorithm", "solver" on its own.
 
+**Solver manager**:
+The single place that holds the active Solver backend and delegates solves to it.
+It is not itself a Solver backend.
+_Avoid_: "solver" (ambiguous with a backend), "dispatcher".
+
 **Solve outcome**:
 The complete result of one Plate solve: the coordinates, roll and field of view,
 site-relative altitude and azimuth, constellation, matched-star count, the annotated

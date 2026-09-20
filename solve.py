@@ -177,10 +177,10 @@ def run_solve(image, solver, observer, catalog, clock=ephem.now):
         logger.warning("Plate solve failed to find a solution.")
         return SolveOutcome(error="No solution found.", image=image)
 
-    ra_val = result["ra"]
-    dec_val = result["dec"]
-    roll_val = result["roll"]
-    fov_val = result["fov"]
+    ra_val = result.ra
+    dec_val = result.dec
+    roll_val = result.roll
+    fov_val = result.fov
 
     ra_hms = ephem.hours(math.radians(ra_val))
     dec_dms = ephem.degrees(math.radians(dec_val))
@@ -200,7 +200,7 @@ def run_solve(image, solver, observer, catalog, clock=ephem.now):
         dec=dec_val,
         roll=roll_val,
         fov=fov_val,
-        matched_stars_count=result.get("matched_stars_count", 0),
+        matched_stars_count=result.matched_stars_count,
         ra_hms=format_radec_fixed_width(
             ra_hms, is_ra=True, total_width=10, decimal_places=1
         ),
@@ -220,10 +220,10 @@ def run_solve(image, solver, observer, catalog, clock=ephem.now):
 def _annotate(image, result, constellation, catalog):
     """Draw star labels and constellation boundaries onto the image."""
     draw = ImageDraw.Draw(image)
-    matched_catID = result.get("matched_catID", [])
-    matched_centroids = result.get("matched_centroids", [])
+    matched_cat_ids = result.matched_cat_ids
+    matched_centroids = result.matched_centroids
 
-    for star_id, point in zip(matched_catID, matched_centroids):
+    for star_id, point in zip(matched_cat_ids, matched_centroids):
         try:
             position = (int(point[1]) + 8, int(point[0]) - 8)
             label = decode_simbad_greek(
@@ -243,8 +243,8 @@ def _annotate(image, result, constellation, catalog):
 
 
 def _draw_boundaries(draw, result, constellation, boundaries):
-    matched_stars = np.array(result.get("matched_stars", []))
-    matched_centroids = np.array(result.get("matched_centroids", []))
+    matched_stars = np.array(result.matched_stars)
+    matched_centroids = np.array(result.matched_centroids)
     if len(matched_stars) == 0 or len(matched_centroids) == 0:
         return
 

@@ -1,6 +1,8 @@
 import unittest
 from abc import ABC
-from solver import BaseSolver
+
+from solver import BaseSolver, SolverResult
+
 
 class TestBaseSolver(unittest.TestCase):
     def test_is_abstract(self):
@@ -13,7 +15,7 @@ class TestBaseSolver(unittest.TestCase):
         """Test that BaseSolver has the required abstract methods."""
         class MockSolver(BaseSolver):
             pass
-        
+
         with self.assertRaises(TypeError):
             MockSolver()
 
@@ -21,12 +23,13 @@ class TestBaseSolver(unittest.TestCase):
         """Test that a valid subclass can be instantiated and has a solve method."""
         class ValidSolver(BaseSolver):
             def solve(self, image):
-                return {"ra": 0, "dec": 0}
-        
+                return SolverResult(ra=0, dec=0, roll=0, fov=0)
+
         solver = ValidSolver()
         self.assertTrue(hasattr(solver, 'solve'))
         result = solver.solve(None)
-        self.assertEqual(result["ra"], 0)
+        self.assertEqual(result.ra, 0)
+
 
 if __name__ == '__main__':
     unittest.main()

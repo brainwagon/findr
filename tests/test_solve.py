@@ -1,23 +1,21 @@
 import unittest
+from dataclasses import replace
 
 import ephem
 from PIL import Image, ImageFont
 
 from catalog import Catalog
 from solve import format_radec_fixed_width, run_solve
-from solver import BaseSolver
+from solver import BaseSolver, SolverResult
 
 
-SOLUTION = {
-    "ra": 186.0,
-    "dec": -60.0,
-    "roll": 12.5,
-    "fov": 3.2,
-    "matched_stars_count": 42,
-    "matched_catID": [],
-    "matched_centroids": [],
-    "matched_stars": [],
-}
+SOLUTION = SolverResult(
+    ra=186.0,
+    dec=-60.0,
+    roll=12.5,
+    fov=3.2,
+    matched_stars_count=42,
+)
 
 
 class FakeSolver(BaseSolver):
@@ -61,7 +59,7 @@ def black_image():
 class TestRunSolve(unittest.TestCase):
     def test_success_populates_outcome(self):
         outcome = run_solve(
-            black_image(), FakeSolver(dict(SOLUTION)), make_observer(),
+            black_image(), FakeSolver(SOLUTION), make_observer(),
             make_catalog(), clock=fixed_clock,
         )
         self.assertTrue(outcome.ok)
@@ -98,7 +96,9 @@ class TestRunSolve(unittest.TestCase):
         self.assertIs(outcome.image, image)
 
     def test_annotation_marks_image_when_star_matches(self):
-        solution = dict(SOLUTION, matched_catID=[1], matched_centroids=[(50, 50)])
+        solution = replace(
+            SOLUTION, matched_cat_ids=[1], matched_centroids=[(50, 50)]
+        )
         image = black_image()
         before = image.tobytes()
         run_solve(
@@ -111,14 +111,14 @@ class TestRunSolve(unittest.TestCase):
         image = black_image()
         before = image.tobytes()
         run_solve(
-            image, FakeSolver(dict(SOLUTION)), make_observer(), make_catalog(),
+            image, FakeSolver(SOLUTION), make_observer(), make_catalog(),
             clock=fixed_clock,
         )
         self.assertEqual(image.tobytes(), before)
 
     def test_to_json_has_stable_keys(self):
         outcome = run_solve(
-            black_image(), FakeSolver(dict(SOLUTION)), make_observer(),
+            black_image(), FakeSolver(SOLUTION), make_observer(),
             make_catalog(), clock=fixed_clock,
         )
         payload = outcome.to_json()

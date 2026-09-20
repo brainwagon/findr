@@ -32,7 +32,7 @@ dtparam=power_force_3v3_pwm=1
 ```
 .
 ├── app.py                  # Main Flask application and web server
-├── solver.py               # BaseSolver ABC, Tetra3Solver, CedarSolver, SolverManager
+├── solver.py               # Solver backends (SolverBackend, LibrarySolver, SolverResult) and SolverManager
 ├── solve.py                # Solve pipeline: ImageSource, run_solve, SolveOutcome, SolveStore
 ├── catalog.py              # Star names, constellation boundaries and label font
 ├── camera_dummy.py         # Dummy camera interface for non-Pi development

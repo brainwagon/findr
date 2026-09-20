@@ -512,7 +512,7 @@ def get_solver_info():
     manager = get_solver()
     return jsonify({
         'current': manager.get_current_solver_type(),
-        'available': ['tetra3', 'cedar-solve']
+        'available': manager.available_solvers()
     })
 
 @app.route('/set_solver', methods=['POST'])
