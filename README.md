@@ -54,10 +54,10 @@ dtparam=power_force_3v3_pwm=1
 ├── ids.csv                 # Star identification database
 ├── findr-logo.svg          # Project logo
 ├── cedar-solve/            # Git submodule: cedar-solve plate solver
-├── tetra3-repo/            # Git submodule: patched tetra3 plate solver
+├── tetra3-repo/            # Git submodule: pristine tetra3 plate solver
 ├── olive-solve/            # Git submodule: Rust olive-solve plate solver
 ├── conductor/              # Project planning and track documents
-├── docs/                   # Research and integration notes
+├── docs/                   # Research notes, agent docs and Architecture Decision Records
 ├── tests/                  # Unit tests for the solver modules
 ├── test-images/            # Sample images used by Test Mode
 ├── static/                 # CSS and JavaScript assets
