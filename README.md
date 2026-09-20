@@ -10,11 +10,13 @@ This project provides a web-based interface for a Raspberry Pi-based telescope f
 
 ## Features
 
-- **Plate Solving:** Uses the `tetra3` library to identify star fields and return RA/Dec coordinates, roll, and FOV.
+- **Modular Plate Solving:** Supports both `tetra3` and its fork `cedar-solve` (the default) behind a `BaseSolver` abstraction, with runtime switching via a `SolverManager` and a dropdown in the web UI.
+- **Plate Solving:** Identifies star fields and returns RA/Dec coordinates, roll, FOV, altitude/azimuth, and the constellation.
 - **Star Identification:** Annotates solved images with star names (Simbad/Greek designations).
 - **Constellation Boundaries:** Automatically draws constellation boundaries on solved fields using `astropy` and `pyephem`.
-- **System Monitoring:** Real-time monitoring of CPU temperature, load, and power stats (via INA219 if available).
-- **Web-Based Interface:** Control camera settings (gain, exposure, etc.) and trigger solves from any browser.
+- **System Monitoring:** Real-time monitoring of CPU temperature, load, and power stats (via INA219 if available), including bus voltage/current, AC vs. battery source, estimated LiPo state of charge, and time remaining.
+- **Web-Based Interface:** Control camera settings (gain, exposure, brightness, contrast), pause/resume the stream, view live/solve FPS, and trigger solves from any browser.
+- **Test Mode:** Cycle through pre-loaded images in the `test-images/` directory to verify solver performance without live hardware.
 - **Hybrid Camera Support:** Automatically uses `Picamera2` on Raspberry Pi hardware, falling back to a dummy camera for development on other platforms.
 
 ## Hardware Optimization
@@ -30,11 +32,25 @@ dtparam=power_force_3v3_pwm=1
 ```
 .
 ├── app.py                  # Main Flask application and web server
-├── solver.py               # PlateSolver abstraction layer
+├── solver.py               # BaseSolver ABC, Tetra3Solver, CedarSolver, SolverManager
+├── solve.py                # Solve pipeline: ImageSource, run_solve, SolveOutcome, SolveStore
+├── catalog.py              # Star names, constellation boundaries and label font
 ├── camera_dummy.py         # Dummy camera interface for non-Pi development
+├── i2c.py                  # I2C peripheral support module
+├── ina219_reader.py        # Standalone INA219 power monitor utility
 ├── requirements.txt        # Python dependencies (excluding system libraries)
+├── REQUIREMENTS.md         # Original project requirements document
+├── findr.service           # systemd unit for auto-start on boot
 ├── bound_20.dat            # Constellation boundary data
 ├── ids.csv                 # Star identification database
+├── findr-logo.svg          # Project logo
+├── cedar-solve/            # Git submodule: cedar-solve plate solver
+├── tetra3-repo/            # Git submodule: patched tetra3 plate solver
+├── conductor/              # Project planning and track documents
+├── docs/                   # Research and integration notes
+├── patches/                # Patches applied to the bundled solvers
+├── tests/                  # Unit tests for the solver modules
+├── test-images/            # Sample images used by Test Mode
 ├── static/                 # CSS and JavaScript assets
 └── templates/              # HTML templates (Flask)
 ```
@@ -42,9 +58,17 @@ dtparam=power_force_3v3_pwm=1
 ## Installation and Usage
 
 ### 1. Clone the Repository
+The plate solvers are included as git submodules, so clone recursively:
+
 ```bash
-git clone <repository-url>
+git clone --recursive <repository-url>
 cd findr
+```
+
+If you already cloned without `--recursive`, initialize the submodules:
+
+```bash
+git submodule update --init --recursive
 ```
 
 ### 2. Environment Setup
@@ -75,6 +99,12 @@ pip install -r requirements.txt
 python3 app.py
 ```
 Access the interface at `http://findr.local:8080` (or your Pi's actual hostname).
+
+To use a different port, set the `PORT` environment variable:
+
+```bash
+PORT=9090 python3 app.py
+```
 
 ## Network Access (mDNS/Avahi)
 This project is configured to work with **Avahi/mDNS**, allowing you to access the web interface using a friendly hostname instead of an IP address. 
@@ -112,5 +142,15 @@ The application is configured to start automatically on boot using **systemd**.
     sudo systemctl enable findr.service
     sudo systemctl start findr.service
     ```
-- The solver uses `tetra3`. Ensure you have a valid tetra3 database installed (it will attempt to load the default one if available).
+
+## Plate Solver Notes
+- The solver is modular: `cedar-solve` is the default, with `tetra3` available as a fallback and selectable from the UI. Both are bundled as submodules and loaded from their local repositories, so ensure the submodules are initialized.
+- Each solver loads a valid star database (it will attempt to load the default one if available).
 - Use **Test Mode** in the web interface to cycle through pre-loaded images in the `test-images/` directory to verify solver performance without live hardware.
+
+## Running Tests
+Unit tests for the solver abstraction live in `tests/`:
+
+```bash
+python3 -m unittest discover -s tests
+```

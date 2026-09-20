@@ -1,8 +1,15 @@
 import sys
 import os
+import math
 import logging
 from abc import ABC, abstractmethod
 from PIL import Image
+import numpy as np
+
+# tetra3 calls np.math.factorial, which NumPy 2.x removed. The submodule is
+# pinned, so restore the alias here, before importing it, rather than patching
+# the vendored library.
+np.math = math
 
 # Add local library paths to sys.path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
