@@ -34,6 +34,7 @@ dtparam=power_force_3v3_pwm=1
 ├── app.py                  # Main Flask application and web server
 ├── solver.py               # Solver backends (SolverBackend, LibrarySolver, SolverResult) and SolverManager
 ├── solve.py                # Solve pipeline: ImageSource, run_solve, SolveOutcome, SolveStore
+├── overlay.py              # Draws star labels and constellation boundaries on solved images
 ├── catalog.py              # Star names, constellation boundaries and label font
 ├── camera_dummy.py         # Dummy camera interface for non-Pi development
 ├── i2c.py                  # I2C peripheral support module

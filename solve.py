@@ -22,13 +22,9 @@ from dataclasses import dataclass
 from typing import Optional
 
 import ephem
-import numpy as np
-from PIL import Image, ImageDraw
-from astropy import units as u
-from astropy.coordinates import SkyCoord
-from astropy.wcs.utils import fit_wcs_from_points
+from PIL import Image
 
-from catalog import decode_simbad_greek
+import overlay
 
 logger = logging.getLogger(__name__)
 
@@ -213,66 +209,8 @@ def run_solve(image, solver, observer, catalog, clock=ephem.now):
         image=image,
     )
 
-    _annotate(image, result, constellation, catalog)
+    overlay.render(image, result, catalog, constellation)
     return outcome
-
-
-def _annotate(image, result, constellation, catalog):
-    """Draw star labels and constellation boundaries onto the image."""
-    draw = ImageDraw.Draw(image)
-    matched_cat_ids = result.matched_cat_ids
-    matched_centroids = result.matched_centroids
-
-    for star_id, point in zip(matched_cat_ids, matched_centroids):
-        try:
-            position = (int(point[1]) + 8, int(point[0]) - 8)
-            label = decode_simbad_greek(
-                catalog.star_names.get(star_id, str(star_id))
-            )
-            fields = label.split()
-            if fields and fields[0] == "*":
-                label = " ".join(fields[1:])
-            draw.text(position, label, fill=(255, 255, 255), font=catalog.font)
-        except Exception as e:
-            logger.warning("Could not label star %s: %s", star_id, e)
-
-    try:
-        _draw_boundaries(draw, result, constellation, catalog.boundaries)
-    except Exception as e:
-        logger.warning("Constellation boundaries not drawn: %s", e)
-
-
-def _draw_boundaries(draw, result, constellation, boundaries):
-    matched_stars = np.array(result.matched_stars)
-    matched_centroids = np.array(result.matched_centroids)
-    if len(matched_stars) == 0 or len(matched_centroids) == 0:
-        return
-
-    star_xy = (matched_centroids[:, 1], matched_centroids[:, 0])
-    world_coords = SkyCoord(
-        ra=np.array(matched_stars[:, 0]) * u.deg,
-        dec=np.array(matched_stars[:, 1]) * u.deg,
-        frame="icrs",
-    )
-    wcs = fit_wcs_from_points(
-        star_xy, world_coords, projection="TAN", sip_degree=2
-    )
-
-    name = (constellation or "").upper()
-    if name not in boundaries:
-        return
-
-    pixel_points = []
-    for ra, dec in boundaries[name]:
-        try:
-            px, py = wcs.world_to_pixel(SkyCoord(ra, dec, unit="deg"))
-            pixel_points.append((px, py))
-        except Exception:
-            pixel_points.append(None)
-
-    for p1, p2 in zip(pixel_points, pixel_points[1:]):
-        if p1 and p2:
-            draw.line([p1, p2], fill="yellow", width=1)
 
 
 class SolveStore:

@@ -38,6 +38,10 @@ boundaries and the label font. Distinct from a Solver backend's own star databas
 which it uses to match the pattern.
 _Avoid_: "star database", "database" (ambiguous with the Solver backend's data).
 
+**Overlay**:
+The star labels and constellation boundaries drawn onto a solved image.
+_Avoid_: annotation, markup, layer.
+
 **Solve store**:
 The single place that holds the status of the current solve and its Solve outcome,
 so that the solver thread and the web request that reads it do not disagree.

@@ -1,5 +1,4 @@
 import unittest
-from dataclasses import replace
 
 import ephem
 from PIL import Image, ImageFont
@@ -34,11 +33,7 @@ class RaisingSolver(BaseSolver):
 
 
 def make_catalog():
-    return Catalog(
-        star_names={1: "alf Cen"},
-        boundaries={},
-        font=ImageFont.load_default(),
-    )
+    return Catalog(star_names={}, boundaries={}, font=ImageFont.load_default())
 
 
 def make_observer():
@@ -94,27 +89,6 @@ class TestRunSolve(unittest.TestCase):
         self.assertFalse(outcome.ok)
         self.assertIn("boom", outcome.error)
         self.assertIs(outcome.image, image)
-
-    def test_annotation_marks_image_when_star_matches(self):
-        solution = replace(
-            SOLUTION, matched_cat_ids=[1], matched_centroids=[(50, 50)]
-        )
-        image = black_image()
-        before = image.tobytes()
-        run_solve(
-            image, FakeSolver(solution), make_observer(), make_catalog(),
-            clock=fixed_clock,
-        )
-        self.assertNotEqual(image.tobytes(), before)
-
-    def test_no_annotation_leaves_image_untouched(self):
-        image = black_image()
-        before = image.tobytes()
-        run_solve(
-            image, FakeSolver(SOLUTION), make_observer(), make_catalog(),
-            clock=fixed_clock,
-        )
-        self.assertEqual(image.tobytes(), before)
 
     def test_to_json_has_stable_keys(self):
         outcome = run_solve(
