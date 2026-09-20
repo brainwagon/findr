@@ -10,7 +10,7 @@
 - **picamera:** Provides a pure Python interface to the Raspberry Pi camera module, allowing direct control over various camera settings.
 - **numpy:** Used for efficient numerical computations and array manipulations, likely involved in image processing or plate solving.
 - **pillow (PIL Fork):** Provides image processing capabilities, such as resizing, cropping, and format conversion.
-- **tetra3:** A fast, "lost-in-space" star plate solver library by ESA. (Manually patched for NumPy 2.x compatibility).
+- **tetra3:** A fast, "lost-in-space" star plate solver library by ESA. (The vendored submodule is pinned and uses `np.math.factorial`; `solver.py` restores the `np.math` alias at runtime for NumPy 2.x compatibility — see `docs/tetra3_patch.md`).
 - **scipy:** Required by tetra3 for scientific computing and optimization.
 - **smbus2:** A library for I2C communication, potentially used for interfacing with other sensors or hardware components.
 
